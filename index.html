@@ -190,7 +190,7 @@ dialog::backdrop{background:rgba(74,59,44,.35)}
   <header class="top">
     <div>
       <h1 id="title">Our household budget</h1>
-      <p class="hello" id="hello"></p>
+      <p class="hello" id="hello" hidden></p>
     </div>
     <div class="top-right">
       <div class="month-nav" aria-label="Choose month">
@@ -297,7 +297,9 @@ function normalize(d){
   const base = defaultState();
   const s = Object.assign(base, d || {});
   ['sources','income','expenses','bills','goals','contributions'].forEach(k => { if(!Array.isArray(s[k])) s[k] = []; });
-  if(!Array.isArray(s.people) || s.people.length < 2) s.people = base.people;
+  if(!Array.isArray(s.people) || !s.people.length) s.people = base.people;
+  s.people = s.people.filter(p => p && p.id && p.name).slice(0, 2);
+  if(!s.people.length) s.people = base.people;
   if(!Array.isArray(s.expenseCategories) || !s.expenseCategories.length) s.expenseCategories = [...DEFAULT_EXPENSE_CATS];
   if(!Array.isArray(s.billCategories) || !s.billCategories.length) s.billCategories = [...DEFAULT_BILL_CATS];
   return s;
@@ -323,6 +325,9 @@ function monthName(ym){ return new Date(ym + '-15T12:00:00').toLocaleDateString(
 function prettyDate(d){ return new Date(d + 'T12:00:00').toLocaleDateString('en-US',{month:'short', day:'numeric'}); }
 function daysIn(ym){ const [y,m] = ym.split('-').map(Number); return new Date(y, m, 0).getDate(); }
 function defaultDateFor(ym){ return ym === CUR ? todayStr() : `${ym}-01`; }
+const solo = () => S.people.length === 1;
+const defaultWho = () => solo() ? S.people[0].id : 'shared';
+const bothOf = (two, one) => solo() ? one : two;
 function personName(id){ if(id === 'shared') return 'Shared'; const p = S.people.find(p => p.id === id); return p ? p.name : 'Unknown'; }
 function personColor(id){ if(id === 'shared') return SHARED_COLOR; const i = S.people.findIndex(p => p.id === id); return PERSON_COLORS[i] || SHARED_COLOR; }
 const sum = arr => arr.reduce((a,b) => a + (+b || 0), 0);
@@ -395,7 +400,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 function renderAll(){
   $('#month-label').textContent = monthLabel(view.month);
   const [a,b] = S.people;
-  $('#hello').textContent = `${a.name} & ${b.name}'s money, all in one place`;
+  $('#hello').textContent = '';
   renderBand();
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === view.tab)));
   document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + view.tab);
@@ -473,7 +478,7 @@ function renderIncome(){
     : `<div class="empty-note">Nothing logged for ${monthName(m)} yet.</div>`;
 
   el.innerHTML = `
-    <div class="panel-intro"><div><h2>Income</h2><p>Every way money comes in, for both of you. Steady sources forecast from what you enter. Sources that vary forecast from your last three months.</p></div></div>
+    <div class="panel-intro"><div><h2>Income</h2><p>Every way money comes in${bothOf(', for both of you', '')}. Steady sources forecast from what you enter. Sources that vary forecast from your last three months.</p></div></div>
     ${logForm}
     <div class="grid-2">${people}</div>
     <div class="card" style="margin-top:16px"><h3 style="margin-bottom:8px">Logged in ${monthName(m)}</h3>${table}</div>`;
@@ -481,7 +486,9 @@ function renderIncome(){
 
 /* ---------- Expenses tab ---------- */
 function whoOptions(selected){
-  return S.people.map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${esc(p.name)}</option>`).join('') + `<option value="shared" ${selected === 'shared' || !selected ? 'selected' : ''}>Shared</option>`;
+  if(!selected) selected = defaultWho();
+  const people = S.people.map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+  return solo() ? people : people + `<option value="shared" ${selected === 'shared' ? 'selected' : ''}>Shared</option>`;
 }
 function catOptions(list, selected){ return list.map(c => `<option ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join(''); }
 function renderExpenses(){
@@ -500,7 +507,7 @@ function renderExpenses(){
       <div class="row">
         <div class="field"><label for="le-amt">Amount</label><input id="le-amt" name="amount" inputmode="decimal" placeholder="$0.00" required></div>
         <div class="field"><label for="le-cat">Category</label><select id="le-cat" name="category">${catOptions(S.expenseCategories)}</select></div>
-        <div class="field"><label for="le-who">Who paid</label><select id="le-who" name="personId">${whoOptions('shared')}</select></div>
+        <div class="field"><label for="le-who">Who paid</label><select id="le-who" name="personId">${whoOptions()}</select></div>
         <div class="field"><label for="le-date">Date</label><input id="le-date" type="date" name="date" value="${defaultDateFor(m)}" required></div>
         <div class="field wide"><label for="le-note">Note (optional)</label><input id="le-note" name="note" placeholder="e.g. Kroger run"></div>
         <button class="btn orange" type="submit">Log expense</button>
@@ -590,7 +597,7 @@ function renderInsights(){
   el.innerHTML = `
     <div class="panel-intro"><div><h2>Charts &amp; data</h2><p>A look ahead based on your steady income, your recent averages for income that varies, your bills, and your usual everyday spending.</p></div></div>
     <div class="grid-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
-      <div class="card stat in"><div class="lbl">Expected income</div><div class="num">${money0(pInc)}</div><div class="note">per month, both of you</div></div>
+      <div class="card stat in"><div class="lbl">Expected income</div><div class="num">${money0(pInc)}</div><div class="note">per month${bothOf(', both of you', '')}</div></div>
       <div class="card stat out"><div class="lbl">Expected spending</div><div class="num">${money0(pOut)}</div><div class="note">${money0(projectedBills())} bills + ${money0(averageEverydaySpending())} everyday</div></div>
       <div class="card stat"><div class="lbl">Monthly gap</div><div class="num" style="color:${gap >= 0 ? 'var(--green-deep)' : 'var(--orange-deep)'}">${gap >= 0 ? '+' : '−'}${money0(Math.abs(gap))}</div><div class="note">${gap >= 0 ? 'left over each month' : 'short each month'}</div></div>
       <div class="card stat"><div class="lbl">Savings rate</div><div class="num">${rate == null ? '—' : rate + '%'}</div><div class="note">of income left after spending</div></div>
@@ -774,10 +781,10 @@ function billDialog(bill){
 function settingsDialog(firstRun){
   const [a,b] = S.people;
   openDialog(firstRun ? 'Welcome! Who’s budgeting?' : 'Settings', `
-    ${firstRun ? '<p class="muted">Add both of your names. You can change them later in settings.</p>' : ''}
+    ${firstRun ? '<p class="muted">Add your name. Add a second name if you’re budgeting with a partner, or leave it blank if it’s just you. You can change this later in settings.</p>' : ''}
     <div class="row">
-      <div class="field"><label>First person</label><input name="p1" value="${esc(a.name === 'Person 1' ? '' : a.name)}" placeholder="Name"></div>
-      <div class="field"><label>Second person</label><input name="p2" value="${esc(b.name === 'Person 2' ? '' : b.name)}" placeholder="Name"></div>
+      <div class="field"><label>Your name</label><input name="p1" value="${esc(a.name === 'Person 1' ? '' : a.name)}" placeholder="Name" required></div>
+      <div class="field"><label>Partner (optional)</label><input name="p2" value="${esc(b && b.name !== 'Person 2' ? b.name : '')}" placeholder="Leave blank if it’s just you"></div>
     </div>
     <div class="dlg-actions"><button type="submit" class="btn" name="go" value="save">${firstRun ? 'Get started' : 'Save names'}</button></div>
     <hr class="divider">
@@ -792,14 +799,22 @@ function settingsDialog(firstRun){
     (fd, submitter) => {
       if(submitter && submitter.name !== 'go') return false;
       const n1 = String(fd.get('p1') || '').trim(), n2 = String(fd.get('p2') || '').trim();
+      let warn = '';
       if(n1) S.people[0].name = n1;
-      if(n2) S.people[1].name = n2;
+      if(n2){
+        if(S.people[1]) S.people[1].name = n2; else S.people.push({ id:'p2', name:n2 });
+      } else if(S.people[1]){
+        const pid = S.people[1].id;
+        const inUse = S.sources.some(s => s.personId === pid) || S.expenses.some(e => e.personId === pid) || S.bills.some(b => b.personId === pid) || S.contributions.some(c => c.personId === pid);
+        if(inUse) warn = `${S.people[1].name} still has income sources or entries, so they stay for now.`;
+        else S.people = [S.people[0]];
+      }
       S.onboarded = true;
       if(submitter && submitter.value === 'sample'){
         if(!firstRun && (S.income.length || S.expenses.length || S.bills.length || S.sources.length) && !confirm('Replace your current data with sample data?')) return false;
         loadSample(); commit('Sample data loaded'); return;
       }
-      commit('Saved');
+      commit(warn || 'Saved');
     });
 }
 
@@ -913,7 +928,7 @@ function contribDialog(g){
   openDialog(`Add money to ${g.name}`, `
     <div class="row">
       <div class="field"><label>Amount</label><input name="amount" inputmode="decimal" placeholder="$0.00" required></div>
-      <div class="field"><label>Who</label><select name="personId">${whoOptions('shared')}</select></div>
+      <div class="field"><label>Who</label><select name="personId">${whoOptions()}</select></div>
       <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
     </div>
     <div class="field"><label>Where it came from</label><input name="note" placeholder="e.g. Sold the old amp on Marketplace"></div>
@@ -946,7 +961,7 @@ function categoriesDialog(){
    Sample data
    ========================================================= */
 function loadSample(){
-  const [p1, p2] = S.people.map(p => p.id);
+  const [p1] = S.people.map(p => p.id); const p2 = S.people[1] ? S.people[1].id : p1; const shared = solo() ? p1 : 'shared';
   const rnd = (a,b) => Math.round((a + Math.random() * (b - a)) * 100) / 100;
   const today = new Date().getDate();
   const src = [
@@ -958,12 +973,12 @@ function loadSample(){
     { id:uid(), personId:p2, name:'Craft sales', type:'hobby', kind:'variable', expected:150, active:true }
   ];
   const bills = [
-    { id:uid(), name:'Rent', amount:1650, frequency:'monthly', category:'Housing', dueDay:1, personId:'shared', active:true },
+    { id:uid(), name:'Rent', amount:1650, frequency:'monthly', category:'Housing', dueDay:1, personId:shared, active:true },
     { id:uid(), name:'Electric', amount:125, frequency:'monthly', category:'Utilities', dueDay:12, personId:p1, active:true },
     { id:uid(), name:'Internet', amount:70, frequency:'monthly', category:'Phone & internet', dueDay:20, personId:p2, active:true },
-    { id:uid(), name:'Phones', amount:95, frequency:'monthly', category:'Phone & internet', dueDay:8, personId:'shared', active:true },
+    { id:uid(), name:'Phones', amount:95, frequency:'monthly', category:'Phone & internet', dueDay:8, personId:shared, active:true },
     { id:uid(), name:'Car insurance', amount:160, frequency:'monthly', category:'Insurance', dueDay:15, personId:p2, active:true },
-    { id:uid(), name:'Streaming', amount:28, frequency:'monthly', category:'Subscriptions', dueDay:5, personId:'shared', active:true },
+    { id:uid(), name:'Streaming', amount:28, frequency:'monthly', category:'Subscriptions', dueDay:5, personId:shared, active:true },
     { id:uid(), name:'Car payment', amount:340, frequency:'monthly', category:'Car', dueDay:22, personId:p1, active:true }
   ];
   const income = [], expenses = [];
@@ -979,13 +994,13 @@ function loadSample(){
     if(Math.random() > .35) add(src[5], 17, rnd(40, 220), 'Market sales');
     bills.forEach(b => { if((b.dueDay || 1) <= last) expenses.push({ id:uid(), billId:b.id, date:d(b.dueDay || 1), amount:b.amount, category:b.category, personId:b.personId, note:b.name }); });
     const exp = (day, cat, lo, hi, who, note) => { if(day <= last) expenses.push({ id:uid(), date:d(day), amount:rnd(lo, hi), category:cat, personId:who, note }); };
-    [4, 11, 18, 25].forEach(day => exp(day, 'Groceries', 90, 170, 'shared', 'Grocery run'));
+    [4, 11, 18, 25].forEach(day => exp(day, 'Groceries', 90, 170, shared, 'Grocery run'));
     [7, 21].forEach(day => exp(day, 'Gas & transport', 35, 60, p1, 'Gas'));
     [9, 26].forEach(day => exp(day, 'Gas & transport', 30, 55, p2, 'Gas'));
     [6, 13, 27].forEach(day => exp(day, 'Dining out', 25, 85, Math.random() > .5 ? p1 : p2, 'Dinner'));
-    exp(16, 'Pets', 30, 70, 'shared', 'Cat food & litter');
-    exp(14, 'Household', 20, 90, 'shared', 'Target');
-    exp(23, 'Entertainment', 15, 80, 'shared', 'Movie night');
+    exp(16, 'Pets', 30, 70, shared, 'Cat food & litter');
+    exp(14, 'Household', 20, 90, shared, 'Target');
+    exp(23, 'Entertainment', 15, 80, shared, 'Movie night');
     if(Math.random() > .5) exp(19, 'Shopping', 30, 160, p2, '');
     if(Math.random() > .6) exp(28, 'Health', 20, 120, p1, 'Pharmacy');
   }
@@ -998,7 +1013,7 @@ function loadSample(){
   const contributions = [
     { id:uid(), goalId:goals[0].id, personId:p1, amount:50, date:addMonths(CUR, -2) + '-14', note:'Sold the old pedal on Marketplace' },
     { id:uid(), goalId:goals[0].id, personId:p2, amount:120, date:addMonths(CUR, -1) + '-03', note:'Birthday money' },
-    { id:uid(), goalId:goals[1].id, personId:'shared', amount:200, date:addMonths(CUR, -1) + '-20', note:'Leftover from last month' }
+    { id:uid(), goalId:goals[1].id, personId:shared, amount:200, date:addMonths(CUR, -1) + '-20', note:'Leftover from last month' }
   ];
   Object.assign(S, { sources:src, bills, income, expenses, goals, contributions });
 }
