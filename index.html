@@ -4,7 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Household Budget</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EFE3CF">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -198,6 +204,7 @@ dialog::backdrop{background:rgba(74,59,44,.35)}
 
 <dialog id="dlg"><form id="dlg-form" novalidate></form></dialog>
 <input type="file" id="import-file" accept="application/json,.json" hidden>
+<input type="file" id="receipt-file" accept="image/*" capture="environment" hidden>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -232,7 +239,13 @@ const Cloud = {
     r = await this.client.from('budget_members').insert({ household_id:id, user_id:this.user.id }); if(r.error) throw r.error;
     this.householdId = id;
   },
-  async joinHousehold(code){ const { error } = await this.client.from('budget_members').insert({ household_id:code, user_id:this.user.id }); if(error) throw error; this.householdId = code; },
+  async acceptInvite(){ const { data, error } = await this.client.rpc('budget_accept_invites'); if(error) throw error; if(data) this.householdId = data; return data; },
+  async invite(email){ const { error } = await this.client.from('budget_invites').insert({ household_id:this.householdId, email }); if(error) throw error; },
+  async uninvite(email){ const { error } = await this.client.from('budget_invites').delete().eq('household_id', this.householdId).eq('email', email); if(error) throw error; },
+  async members(){
+    const [m, i] = await Promise.all([ this.client.rpc('budget_household_emails', { h:this.householdId }), this.client.from('budget_invites').select('email').eq('household_id', this.householdId) ]);
+    return { members:(m.data || []), invited:(i.data || []).map(x => x.email) };
+  },
   async load(){ const { data, error } = await this.client.from('budget_households').select('data').eq('id', this.householdId).single(); if(error) throw error; return data.data; },
   async save(state){ const { error } = await this.client.from('budget_households').update({ data:state, updated_by:this.user.id }).eq('id', this.householdId); if(error) throw error; },
   subscribe(onChange){
@@ -449,7 +462,8 @@ function renderExpenses(){
   el.innerHTML = `
     <div class="panel-intro"><div><h2>Expenses</h2><p>Everyday spending like groceries, gas, and nights out. Bills you mark as paid show up here too.</p></div></div>
     <form class="quick" data-form="log-expense">
-      <h3>Log something you spent</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0">Log something you spent</h3>
+        ${Cloud.user ? '<button type="button" class="btn ghost small" data-action="scan-receipt" id="scan-btn">📷 Scan a receipt</button>' : ''}</div>
       <div class="row">
         <div class="field"><label for="le-amt">Amount</label><input id="le-amt" name="amount" inputmode="decimal" placeholder="$0.00" required></div>
         <div class="field"><label for="le-cat">Category</label><select id="le-cat" name="category">${catOptions(S.expenseCategories)}</select></div>
@@ -715,11 +729,12 @@ function settingsDialog(firstRun){
       <button type="submit" class="btn ghost small" name="go" value="sample">Load sample data</button></div>
     ${firstRun ? '' : `
     <hr class="divider">
-    <div><h3>Sync between your phones</h3>${accountSection()}</div>
+    <div><h3>Sharing &amp; sync</h3>${accountSection()}</div>
     <hr class="divider">
     <div><h3>Backup</h3><p class="muted" style="margin:4px 0 8px">${Cloud.householdId ? 'Your budget is synced online, but a backup file is still a good idea now and then.' : 'Your data is saved in this browser only. Download a backup file now and then, especially before clearing browser data.'}</p>
       <div class="row" style="gap:8px"><button type="button" class="btn ghost small" data-action="export">Download backup</button><button type="button" class="btn ghost small" data-action="import">Restore from backup</button><button type="button" class="btn danger small" data-action="reset">Erase everything</button></div></div>`}`,
     (fd, submitter) => {
+      if(submitter && submitter.name !== 'go') return false;
       const n1 = String(fd.get('p1') || '').trim(), n2 = String(fd.get('p2') || '').trim();
       if(n1) S.people[0].name = n1;
       if(n2) S.people[1].name = n2;
@@ -734,16 +749,30 @@ function settingsDialog(firstRun){
 
 function accountSection(){
   if(!Cloud.enabled()) return '<p class="muted" style="margin:4px 0 0">Sync isn’t set up in this copy of the app. Data stays in this browser.</p>';
-  if(!Cloud.user) return `<p class="muted" style="margin:4px 0 8px">Sign in with your shared login and this device joins the same budget. Whatever is on this device comes along.</p><button type="button" class="btn small" data-action="sign-in">Sign in</button>`;
-  return `<p class="muted" style="margin:4px 0 8px">Signed in as <b>${esc(Cloud.user.email)}</b> and staying signed in on this device. Use the same email and password on the other phone and you’ll both see the same budget.</p>
-    <button type="button" class="btn ghost small" data-action="sign-out">Sign out</button>`;
+  if(!Cloud.user) return `<p class="muted" style="margin:4px 0 8px">Sign in and this device joins your shared budget. Whatever is on this device comes along.</p><button type="button" class="btn small" data-action="sign-in">Sign in</button>`;
+  return `<p class="muted" style="margin:4px 0 8px">Signed in as <b>${esc(Cloud.user.email)}</b>, staying signed in on this device.</p>
+    <div id="members-box"><small>Loading who’s in this budget…</small></div>
+    <div class="row" style="gap:8px;margin-top:10px;align-items:flex-end">
+      <div class="field"><label for="invite-email">Add your partner by email</label><input id="invite-email" type="email" placeholder="their@email.com"></div>
+      <button type="button" class="btn small" data-action="invite">Add</button>
+    </div>
+    <span class="hint">They create their own login with that email (or sign in if they already have one) and they’re in.</span>
+    <div style="margin-top:10px"><button type="button" class="btn ghost small" data-action="sign-out">Sign out</button></div>`;
+}
+async function renderMembers(){
+  const box = $('#members-box'); if(!box || !Cloud.householdId) return;
+  try{
+    const { members, invited } = await Cloud.members();
+    box.innerHTML = `<small><b>In this budget:</b> ${members.map(esc).join(', ') || '—'}</small>` +
+      (invited.length ? `<br><small><b>Waiting to sign in:</b> ${invited.map(e => `${esc(e)} <button type="button" class="linkish" data-action="uninvite" data-email="${esc(e)}">remove</button>`).join(' ')}</small>` : '');
+  }catch(e){ box.innerHTML = `<small>Couldn’t load members: ${esc(e.message)}</small>`; }
 }
 
 function signInDialog(){
   const local = S.income.length || S.expenses.length || S.bills.length || S.sources.length;
   let remembered = ''; try{ remembered = localStorage.getItem(USER_KEY) || ''; }catch(e){}
   openDialog('Sign in to sync', `
-    <p class="muted">One shared login for the two of you. Sign in on both phones and you see the same budget, live.${local ? ' The data already on this device comes along.' : ''}</p>
+    <p class="muted">You each get your own login and share one budget. If you already have a login for another one of your sites, use that.${local ? ' The data already on this device comes along.' : ''}</p>
     <div class="field"><label>Email</label><input name="email" type="email" autocomplete="username" autocapitalize="none" value="${esc(remembered)}" required></div>
     <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" minlength="6" required><span class="hint">At least 6 characters. You stay signed in on this device afterward.</span></div>
     <div class="dlg-actions">
@@ -768,8 +797,9 @@ function signInDialog(){
 }
 
 async function connectHousehold(){
-  const h = await Cloud.findHousehold();
-  if(!h){ await Cloud.createHousehold(S); } // first sign-in: whatever is on this device becomes the shared budget
+  let h = await Cloud.findHousehold();
+  if(!h) h = await Cloud.acceptInvite();      // partner was added by email: join that budget
+  if(!h){ await Cloud.createHousehold(S); }   // first person in: whatever is on this device becomes the shared budget
   const data = await Cloud.load();
   S = normalize(data); Store.save(S); renderAll();
   setSyncPill('Synced');
@@ -847,7 +877,7 @@ function loadSample(){
 const actions = {
   'prev-month': () => { view.month = addMonths(view.month, -1); renderAll(); },
   'next-month': () => { view.month = addMonths(view.month, 1); renderAll(); },
-  'open-settings': () => settingsDialog(false),
+  'open-settings': () => { settingsDialog(false); renderMembers(); },
   'close-dialog': () => closeDialog(),
   'add-source': b => sourceDialog(null, b.dataset.person),
   'edit-source': b => sourceDialog(S.sources.find(s => s.id === b.dataset.id)),
@@ -881,7 +911,16 @@ const actions = {
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   },
   'import': () => $('#import-file').click(),
+  'scan-receipt': () => $('#receipt-file').click(),
   'sign-in': () => signInDialog(),
+  'invite': () => {
+    const input = $('#invite-email'), email = String(input && input.value || '').trim().toLowerCase();
+    if(!email.includes('@')){ toast('Enter their email.'); return; }
+    if(Cloud.user && email === String(Cloud.user.email).toLowerCase()){ toast('That’s you. Enter your partner’s email.'); return; }
+    Cloud.invite(email).then(() => { input.value = ''; toast(`Added ${email}. They can sign in now.`); renderMembers(); })
+      .catch(e => toast(/duplicate/i.test(e.message) ? 'Already added.' : e.message));
+  },
+  'uninvite': b => { Cloud.uninvite(b.dataset.email).then(() => { toast('Removed'); renderMembers(); }).catch(e => toast(e.message)); },
   'sign-out': () => { Cloud.signOut().then(() => { setSyncPill(''); S = normalize(Store.load()); closeDialog(); renderAll(); toast('Signed out'); }); },
   'reset': () => {
     if(!confirm('Erase all income, expenses, bills, and names? This can’t be undone unless you have a backup.')) return;
@@ -926,6 +965,41 @@ $('#import-file').addEventListener('change', async e => {
   }catch(err){ toast('That file isn’t a budget backup. Choose a .json file you downloaded from this app.'); }
 });
 window.addEventListener('resize', () => { if(view.tab === 'insights') charts.forEach(c => c.resize()); });
+
+/* ---------- receipt scanning (Claude, via the scan-receipt edge function) ---------- */
+function shrinkImage(file, max = 1600){
+  return new Promise((resolve, reject) => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.82).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Couldn’t read that image.')); };
+    img.src = url;
+  });
+}
+$('#receipt-file').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = ''; if(!file) return;
+  const btn = $('#scan-btn'); if(btn){ btn.disabled = true; btn.textContent = 'Reading receipt…'; }
+  try{
+    const image = await shrinkImage(file);
+    const { data, error } = await Cloud.client.functions.invoke('scan-receipt', { body:{ image, media_type:'image/jpeg', categories:S.expenseCategories, today:todayStr() } });
+    if(error){ let msg = error.message; try{ const j = await error.context.json(); if(j && j.error) msg = j.error; }catch(_){ } throw new Error(msg); }
+    if(data.error) throw new Error(data.error);
+    if(data.amount == null){ toast('Couldn’t find a total on that. Try a clearer photo.'); return; }
+    const amt = $('#le-amt'), date = $('#le-date'), cat = $('#le-cat'), note = $('#le-note');
+    if(amt) amt.value = Number(data.amount).toFixed(2);
+    if(date && data.date && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) date.value = data.date;
+    if(cat && data.category && S.expenseCategories.includes(data.category)) cat.value = data.category;
+    if(note){ const items = (data.items || []).slice(0, 3).join(', '); note.value = [data.merchant, items].filter(Boolean).join(' — ').slice(0, 120); }
+    if(amt) amt.focus();
+    toast(data.confidence === 'low' ? 'Filled in, but double-check it.' : 'Filled in. Check it, then tap Log expense.');
+  }catch(err){ toast(err.message || 'Scan failed.'); }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = '📷 Scan a receipt'; } }
+});
 
 /* ---------- start ---------- */
 renderAll();
