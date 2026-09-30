@@ -48,7 +48,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .settings-btn{background:var(--paper);border:2px solid var(--line);width:44px;height:44px}
 
 /* summary band */
-.band{display:grid;grid-template-columns:1fr 1fr 1.3fr;background:var(--paper);border:2px solid var(--line);border-radius:22px;overflow:hidden;margin-bottom:22px}
+.band{display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;background:var(--paper);border:2px solid var(--line);border-radius:22px;overflow:hidden;margin-bottom:22px}
 .band > div{padding:16px 20px}
 .band .in{background:var(--green-soft)}
 .band .out{background:var(--orange-soft)}
@@ -135,6 +135,19 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .bar-track{height:10px;background:var(--tan-soft);border-radius:99px;overflow:hidden;margin-top:3px}
 .bar-track span{display:block;height:100%;background:var(--orange);border-radius:99px}
 
+/* goals */
+.goal{cursor:pointer}
+.goal:hover{border-color:var(--green)}
+.goal.done{opacity:.7}
+.goal-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.goal-emoji{font-size:1.7rem;line-height:1.1;margin-bottom:4px}
+.progress{height:14px;background:var(--tan-soft);border-radius:99px;overflow:hidden;margin:12px 0 6px}
+.progress span{display:block;height:100%;border-radius:99px;background:var(--green);transition:width .4s}
+.progress.splurge span{background:var(--orange)}
+.goal-nums{display:flex;justify-content:space-between;font-size:.92rem;font-weight:700}
+.contribs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.band .aside{background:var(--tan-soft)}
+
 /* bills */
 .bill-status.paid{background:var(--green-soft);border-color:var(--green);color:var(--green-deep)}
 
@@ -191,6 +204,7 @@ dialog::backdrop{background:rgba(74,59,44,.35)}
     <button class="tab" role="tab" data-tab="income">💵 Income</button>
     <button class="tab" role="tab" data-tab="expenses">🛒 Expenses</button>
     <button class="tab" role="tab" data-tab="bills">🧾 Bills</button>
+    <button class="tab" role="tab" data-tab="goals">🎯 Goals</button>
     <button class="tab" role="tab" data-tab="insights">📈 Charts &amp; data</button>
   </nav>
 
@@ -198,6 +212,7 @@ dialog::backdrop{background:rgba(74,59,44,.35)}
     <section class="panel" id="panel-income" role="tabpanel"></section>
     <section class="panel" id="panel-expenses" role="tabpanel" hidden></section>
     <section class="panel" id="panel-bills" role="tabpanel" hidden></section>
+    <section class="panel" id="panel-goals" role="tabpanel" hidden></section>
     <section class="panel" id="panel-insights" role="tabpanel" hidden></section>
   </main>
 </div>
@@ -269,14 +284,14 @@ function defaultState(){
   return {
     version:1, onboarded:false,
     people:[{id:'p1',name:'Person 1'},{id:'p2',name:'Person 2'}],
-    sources:[], income:[], expenses:[], bills:[],
+    sources:[], income:[], expenses:[], bills:[], goals:[], contributions:[],
     expenseCategories:[...DEFAULT_EXPENSE_CATS], billCategories:[...DEFAULT_BILL_CATS]
   };
 }
 function normalize(d){
   const base = defaultState();
   const s = Object.assign(base, d || {});
-  ['sources','income','expenses','bills'].forEach(k => { if(!Array.isArray(s[k])) s[k] = []; });
+  ['sources','income','expenses','bills','goals','contributions'].forEach(k => { if(!Array.isArray(s[k])) s[k] = []; });
   if(!Array.isArray(s.people) || s.people.length < 2) s.people = base.people;
   if(!Array.isArray(s.expenseCategories) || !s.expenseCategories.length) s.expenseCategories = [...DEFAULT_EXPENSE_CATS];
   if(!Array.isArray(s.billCategories) || !s.billCategories.length) s.billCategories = [...DEFAULT_BILL_CATS];
@@ -343,6 +358,15 @@ function averageEverydaySpending(){
 }
 const projectedSpending = () => projectedBills() + averageEverydaySpending();
 const billPayment = (billId, ym) => S.expenses.find(e => e.billId === billId && ymOf(e.date) === ym);
+/* goals: money is either an income entry tagged with goalId, or a direct contribution */
+const goalName = id => { const g = S.goals.find(x => x.id === id); return g ? g.name : 'a goal'; };
+function goalEntries(g){
+  const fromIncome = S.income.filter(e => e.goalId === g.id).map(e => { const s = S.sources.find(x => x.id === e.sourceId); return { id:e.id, kind:'income', date:e.date, amount:e.amount, personId:s ? s.personId : 'shared', label:(s ? s.name : 'Income') + (e.note ? ' · ' + e.note : '') }; });
+  const direct = S.contributions.filter(c => c.goalId === g.id).map(c => ({ id:c.id, kind:'direct', date:c.date, amount:c.amount, personId:c.personId, label:c.note || 'Added directly' }));
+  return [...fromIncome, ...direct].sort((a,b) => b.date.localeCompare(a.date));
+}
+const goalSaved = g => sum(goalEntries(g).map(e => e.amount));
+const monthSetAside = ym => sum(S.income.filter(e => e.goalId && ymOf(e.date) === ym).map(e => e.amount)) + sum(S.contributions.filter(c => ymOf(c.date) === ym).map(c => c.amount));
 
 /* ---------- persistence ---------- */
 let syncTimer = null;
@@ -370,16 +394,17 @@ function renderAll(){
   renderBand();
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === view.tab)));
   document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + view.tab);
-  renderIncome(); renderExpenses(); renderBills(); renderInsights();
+  renderIncome(); renderExpenses(); renderBills(); renderGoals(); renderInsights();
 }
 
 function renderBand(){
-  const m = view.month, inc = monthIncome(m), out = monthExpenses(m), net = inc - out;
+  const m = view.month, inc = monthIncome(m), out = monthExpenses(m), aside = monthSetAside(m), net = inc - out - aside;
   const pct = inc > 0 ? Math.min(100, out / inc * 100) : (out > 0 ? 100 : 0);
   const soFar = m === CUR ? ' so far' : '';
   $('#band').innerHTML = `
     <div class="in"><div class="lbl">Came in${soFar}</div><div class="num">${money0(inc)}</div></div>
     <div class="out"><div class="lbl">Went out${soFar}</div><div class="num">${money0(out)}</div></div>
+    <div class="aside"><div class="lbl">Set aside for goals</div><div class="num">${money0(aside)}</div></div>
     <div class="net"><div class="lbl">${net >= 0 ? 'Left over' : 'Over by'} in ${monthName(m)}</div>
       <div class="num ${net >= 0 ? 'pos' : 'neg'}">${money0(Math.abs(net))}</div>
       <div class="meter" title="Spending as a share of income"><span style="width:${pct}%"></span></div>
@@ -398,6 +423,7 @@ function sourceOptions(selected){
 function renderIncome(){
   const m = view.month, el = $('#panel-income');
   const hasActive = S.sources.some(s => s.active !== false);
+  const openGoals = S.goals.filter(g => !g.done);
   const logForm = hasActive ? `
     <form class="quick" data-form="log-income">
       <h3>Log money that came in</h3>
@@ -408,6 +434,8 @@ function renderIncome(){
         <div class="field wide"><label for="li-note">Note (optional)</label><input id="li-note" name="note" placeholder="e.g. Paycheck, wedding shoot"></div>
         <button class="btn" type="submit">Log income</button>
       </div>
+      ${openGoals.length ? `<div class="row" style="margin-top:10px;align-items:center"><label class="check" style="flex:0 0 auto"><input type="checkbox" name="toGoal" id="li-togoal"> Put toward a goal</label>
+        <select name="goalId" id="li-goal" style="flex:1 1 200px;max-width:320px" hidden>${openGoals.map(g => `<option value="${g.id}">${esc((g.emoji || '🎯') + ' ' + g.name)}</option>`).join('')}</select></div>` : ''}
     </form>` : `<div class="quick"><h3>Start with your income sources</h3><p class="muted" style="margin:4px 0 0">Add each job, side job, freelance gig, or hobby that brings in money. Then you can log payments as they land.</p></div>`;
 
   const people = S.people.map(p => {
@@ -435,7 +463,7 @@ function renderIncome(){
     <thead><tr><th>Date</th><th>Who</th><th>Source</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead>
     <tbody>${entries.map(e => { const s = S.sources.find(x => x.id === e.sourceId); return `<tr>
       <td>${prettyDate(e.date)}</td><td>${esc(s ? personName(s.personId) : '—')}</td><td>${esc(s ? s.name : 'Removed source')}</td>
-      <td class="muted">${esc(e.note || '')}</td><td class="num"><b>${money(e.amount)}</b></td>
+      <td class="muted">${esc(e.note || '')}${e.goalId ? ` <span class="chip green">→ ${esc(goalName(e.goalId))}</span>` : ''}</td><td class="num"><b>${money(e.amount)}</b></td>
       <td class="num"><button class="linkish" data-action="del-income" data-id="${e.id}" aria-label="Delete entry">Delete</button></td></tr>`; }).join('')}</tbody></table></div>`
     : `<div class="empty-note">Nothing logged for ${monthName(m)} yet.</div>`;
 
@@ -513,6 +541,29 @@ function renderBills(){
         <td class="num">${b.active === false ? '<small>Paused</small>' : `<button class="btn small ghost bill-status ${paid ? 'paid' : ''}" data-action="toggle-bill" data-id="${b.id}">${paid ? '✓ Paid' : 'Mark paid'}</button>`}</td>
         <td class="num"><button class="linkish" data-action="edit-bill" data-id="${b.id}">Edit</button></td></tr>`; }).join('')}</tbody>
     </table></div></div>` : `<div class="empty-note">No bills yet. Add rent, utilities, and subscriptions so the forecast knows what's coming.</div>`}`;
+}
+
+/* ---------- Goals tab ---------- */
+function goalCard(g){
+  const saved = goalSaved(g), pct = g.target > 0 ? Math.min(100, saved / g.target * 100) : 0;
+  const by = [...S.people.map(p => [p.name, p.id]), ['Shared','shared']].map(([n,id]) => [n, sum(goalEntries(g).filter(e => e.personId === id).map(e => e.amount))]).filter(x => x[1] > 0);
+  return `<section class="card goal ${g.done ? 'done' : ''}" data-action="open-goal" data-id="${g.id}" role="button" tabindex="0">
+    <div class="goal-head"><div><div class="goal-emoji">${esc(g.emoji || '🎯')}</div><h3>${esc(g.name)}</h3>
+      <span class="chip ${g.type === 'splurge' ? 'orange' : 'green'}">${g.type === 'splurge' ? 'Splurge fund' : 'Saving up'}</span>${g.done ? ' <span class="chip">Done</span>' : ''}</div>
+      <div class="item-side"><b>${money0(saved)}</b><br><small>of ${money0(g.target)}</small></div></div>
+    <div class="progress ${g.type}"><span style="width:${pct}%"></span></div>
+    <div class="goal-nums"><span>${Math.round(pct)}% there</span><span>${saved >= g.target ? 'Goal reached!' : money0(g.target - saved) + ' to go'}</span></div>
+    ${by.length ? `<div class="contribs">${by.map(([n,v]) => `<span class="chip">${esc(n)} ${money0(v)}</span>`).join('')}</div>` : ''}
+  </section>`;
+}
+function renderGoals(){
+  const el = $('#panel-goals');
+  const open = S.goals.filter(g => !g.done), done = S.goals.filter(g => g.done);
+  el.innerHTML = `
+    <div class="panel-intro"><div><h2>Goals</h2><p>The fun side. Saving up for something, or a splurge fund. Money you put toward a goal still counts as income, but it's set aside so it never looks like spending money.</p></div>
+      <button class="btn" data-action="add-goal">+ New goal</button></div>
+    ${open.length ? `<div class="grid-3">${open.map(goalCard).join('')}</div>` : `<div class="empty-note">No goals yet. Add one, then send money to it from the Income tab (“Put toward a goal”) or straight from the goal.</div>`}
+    ${done.length ? `<h3 style="margin:22px 0 10px">Done</h3><div class="grid-3">${done.map(goalCard).join('')}</div>` : ''}`;
 }
 
 /* ---------- Insights tab ---------- */
@@ -807,6 +858,71 @@ async function connectHousehold(){
   if(!S.onboarded) settingsDialog(true);
 }
 
+function goalEditDialog(goal){
+  const g = goal || { type:'save', emoji:'🎯', target:'' };
+  openDialog(goal ? 'Edit goal' : 'New goal', `
+    <div class="row">
+      <div class="field" style="flex:0 0 80px"><label>Emoji</label><input name="emoji" value="${esc(g.emoji || '')}" maxlength="4" placeholder="🎯" style="text-align:center;font-size:1.3rem"></div>
+      <div class="field wide"><label>What is it?</label><input name="name" value="${esc(g.name || '')}" placeholder="e.g. Trip to the coast, new couch" required></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Target amount</label><input name="target" inputmode="decimal" value="${g.target || ''}" placeholder="$0" required></div>
+      <div class="field"><label>Kind</label><select name="type"><option value="save" ${g.type !== 'splurge' ? 'selected' : ''}>Saving up</option><option value="splurge" ${g.type === 'splurge' ? 'selected' : ''}>Splurge fund</option></select></div>
+    </div>
+    <div class="field"><label>Note (optional)</label><input name="note" value="${esc(g.note || '')}" placeholder="Why it matters, or a link"></div>
+    <div class="dlg-actions">
+      ${goal ? '<button type="button" class="btn danger" data-action="delete-goal" data-id="' + goal.id + '">Delete</button>' : ''}
+      <button type="button" class="btn ghost" data-action="close-dialog">Cancel</button>
+      <button type="submit" class="btn">${goal ? 'Save changes' : 'Add goal'}</button>
+    </div>`, fd => {
+      const name = String(fd.get('name') || '').trim(), target = num(fd.get('target'));
+      if(!name){ toast('Give the goal a name.'); return false; }
+      if(isNaN(target) || target <= 0){ toast('Enter a target amount.'); return false; }
+      const data = { name, target, type:fd.get('type'), emoji:String(fd.get('emoji') || '').trim() || '🎯', note:String(fd.get('note') || '').trim() };
+      if(goal) Object.assign(goal, data); else S.goals.push({ id:uid(), createdAt:todayStr(), done:false, ...data });
+      commit(goal ? 'Goal updated' : 'Goal added');
+    });
+}
+
+function goalDialog(g){
+  const saved = goalSaved(g), pct = g.target > 0 ? Math.min(100, saved / g.target * 100) : 0, rows = goalEntries(g);
+  openDialog(`${g.emoji || '🎯'} ${g.name}`, `
+    <div class="goal-nums"><span><b>${money0(saved)}</b> of ${money0(g.target)}</span><span>${Math.round(pct)}%${saved >= g.target ? ' · reached!' : ''}</span></div>
+    <div class="progress ${g.type}" style="margin-top:6px"><span style="width:${pct}%"></span></div>
+    ${g.note ? `<p class="muted">${esc(g.note)}</p>` : ''}
+    <div class="row" style="gap:8px">
+      <button type="button" class="btn small" data-action="add-contrib" data-id="${g.id}">+ Add money</button>
+      <button type="button" class="btn ghost small" data-action="edit-goal" data-id="${g.id}">Edit</button>
+      <button type="button" class="btn ghost small" data-action="toggle-goal-done" data-id="${g.id}">${g.done ? 'Reopen' : 'Mark done'}</button>
+    </div>
+    <hr class="divider">
+    <h3>Where the money came from</h3>
+    ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Who</th><th>What</th><th class="num">Amount</th><th></th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${prettyDate(r.date)}</td><td>${esc(personName(r.personId))}</td><td>${esc(r.label)}${r.kind === 'income' ? ' <span class="chip">Income</span>' : ''}</td><td class="num"><b>${money(r.amount)}</b></td>
+        <td class="num"><button type="button" class="linkish" data-action="remove-contrib" data-goal="${g.id}" data-kind="${r.kind}" data-id="${r.id}">Remove</button></td></tr>`).join('')}
+    </tbody></table></div><span class="hint">Removing an income entry here only takes it off the goal; it stays logged as income.</span>` : '<div class="empty-note">Nothing yet. Add money here, or log income with “Put toward a goal” checked.</div>'}
+    <div class="dlg-actions"><button type="button" class="btn ghost" data-action="close-dialog">Close</button></div>`, () => {});
+}
+
+function contribDialog(g){
+  openDialog(`Add money to ${g.name}`, `
+    <div class="row">
+      <div class="field"><label>Amount</label><input name="amount" inputmode="decimal" placeholder="$0.00" required></div>
+      <div class="field"><label>Who</label><select name="personId">${whoOptions('shared')}</select></div>
+      <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
+    </div>
+    <div class="field"><label>Where it came from</label><input name="note" placeholder="e.g. Sold the old amp on Marketplace"></div>
+    <span class="hint">Use this for money you already have. If it's new income (a gig, a sale), log it on the Income tab with “Put toward a goal” so it counts as income too.</span>
+    <div class="dlg-actions"><button type="button" class="btn ghost" data-action="open-goal" data-id="${g.id}">Back</button><button type="submit" class="btn">Add to goal</button></div>`, fd => {
+      const amount = num(fd.get('amount')), date = fd.get('date');
+      if(isNaN(amount) || amount <= 0){ toast('Enter an amount.'); return false; }
+      if(!date){ toast('Pick a date.'); return false; }
+      S.contributions.push({ id:uid(), goalId:g.id, personId:fd.get('personId'), amount, date, note:String(fd.get('note') || '').trim() });
+      commit(`${money(amount)} added to ${g.name}`);
+      setTimeout(() => goalDialog(S.goals.find(x => x.id === g.id)), 50);
+    });
+}
+
 function categoriesDialog(){
   openDialog('Edit categories', `
     <div class="field"><label>Expense categories, one per line</label><textarea name="exp" rows="8">${esc(S.expenseCategories.join('\n'))}</textarea></div>
@@ -868,7 +984,18 @@ function loadSample(){
     if(Math.random() > .5) exp(19, 'Shopping', 30, 160, p2, '');
     if(Math.random() > .6) exp(28, 'Health', 20, 120, p1, 'Pharmacy');
   }
-  Object.assign(S, { sources:src, bills, income, expenses });
+  const goals = [
+    { id:uid(), name:'Weekend away', emoji:'🏔️', target:1200, type:'save', note:'', done:false, createdAt:addMonths(CUR, -3) + '-01' },
+    { id:uid(), name:'New couch', emoji:'🛋️', target:900, type:'splurge', note:'', done:false, createdAt:addMonths(CUR, -2) + '-01' }
+  ];
+  income.filter(e => e.note === 'Market sales').forEach(e => e.goalId = goals[0].id);
+  income.filter(e => e.note === 'Gig').slice(0, 2).forEach(e => e.goalId = goals[1].id);
+  const contributions = [
+    { id:uid(), goalId:goals[0].id, personId:p1, amount:50, date:addMonths(CUR, -2) + '-14', note:'Sold the old pedal on Marketplace' },
+    { id:uid(), goalId:goals[0].id, personId:p2, amount:120, date:addMonths(CUR, -1) + '-03', note:'Birthday money' },
+    { id:uid(), goalId:goals[1].id, personId:'shared', amount:200, date:addMonths(CUR, -1) + '-20', note:'Leftover from last month' }
+  ];
+  Object.assign(S, { sources:src, bills, income, expenses, goals, contributions });
 }
 
 /* =========================================================
@@ -890,6 +1017,23 @@ const actions = {
   'del-income': b => { S.income = S.income.filter(e => e.id !== b.dataset.id); commit('Entry deleted'); },
   'del-expense': b => { S.expenses = S.expenses.filter(e => e.id !== b.dataset.id); commit('Expense deleted'); },
   'edit-categories': () => categoriesDialog(),
+  'add-goal': () => goalEditDialog(null),
+  'open-goal': b => { const g = S.goals.find(x => x.id === b.dataset.id); if(g){ if(dlg.open) closeDialog(); goalDialog(g); } },
+  'edit-goal': b => { closeDialog(); goalEditDialog(S.goals.find(x => x.id === b.dataset.id)); },
+  'add-contrib': b => { closeDialog(); contribDialog(S.goals.find(x => x.id === b.dataset.id)); },
+  'toggle-goal-done': b => { const g = S.goals.find(x => x.id === b.dataset.id); g.done = !g.done; closeDialog(); commit(g.done ? `${g.name}: done! 🎉` : `${g.name} reopened`); },
+  'remove-contrib': b => {
+    if(b.dataset.kind === 'income'){ const e = S.income.find(x => x.id === b.dataset.id); if(e) delete e.goalId; }
+    else S.contributions = S.contributions.filter(c => c.id !== b.dataset.id);
+    const g = S.goals.find(x => x.id === b.dataset.goal); commit('Removed from goal'); if(g) setTimeout(() => goalDialog(g), 50);
+  },
+  'delete-goal': b => {
+    const id = b.dataset.id;
+    if(!confirm('Delete this goal? Income you logged toward it stays as income; money added directly is removed.')) return;
+    S.income.forEach(e => { if(e.goalId === id) delete e.goalId; });
+    S.contributions = S.contributions.filter(c => c.goalId !== id);
+    S.goals = S.goals.filter(g => g.id !== id); closeDialog(); commit('Goal deleted');
+  },
   'add-bill': () => billDialog(null),
   'edit-bill': b => billDialog(S.bills.find(x => x.id === b.dataset.id)),
   'delete-bill': b => {
@@ -931,7 +1075,9 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-action]'); if(t && actions[t.dataset.action]){ e.preventDefault(); actions[t.dataset.action](t, e); return; }
   const tab = e.target.closest('.tab'); if(tab){ view.tab = tab.dataset.tab; renderAll(); }
 });
+document.addEventListener('change', e => { if(e.target.id === 'li-togoal'){ const sel = $('#li-goal'); if(sel) sel.hidden = !e.target.checked; } });
 document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.target.classList && e.target.classList.contains('goal')){ e.preventDefault(); e.target.click(); return; }
   if(!e.target.classList.contains('tab') || !['ArrowLeft','ArrowRight'].includes(e.key)) return;
   const tabs = [...document.querySelectorAll('.tab')], i = tabs.indexOf(e.target);
   const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
@@ -944,8 +1090,10 @@ document.addEventListener('submit', e => {
   if(isNaN(amount) || amount <= 0){ toast('Enter an amount greater than zero.'); return; }
   if(!date){ toast('Pick a date.'); return; }
   if(kind === 'log-income'){
-    S.income.push({ id:uid(), sourceId:fd.get('sourceId'), date, amount, note:String(fd.get('note') || '').trim() });
-    const keep = fd.get('sourceId'); commit('Income logged');
+    const entry = { id:uid(), sourceId:fd.get('sourceId'), date, amount, note:String(fd.get('note') || '').trim() };
+    if(fd.get('toGoal') === 'on' && fd.get('goalId')) entry.goalId = fd.get('goalId');
+    S.income.push(entry);
+    const keep = fd.get('sourceId'); commit(entry.goalId ? `Income logged and put toward ${goalName(entry.goalId)}` : 'Income logged');
     const sel = $('#li-src'); if(sel) sel.value = keep; $('#li-amt')?.focus();
   } else if(kind === 'log-expense'){
     const cat = fd.get('category'), who = fd.get('personId');
