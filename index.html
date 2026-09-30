@@ -461,7 +461,7 @@ function renderIncome(){
       </li>`;
     }).join('');
     return `<section class="card person" style="--accent:${personColor(p.id)}">
-      <div class="person-head"><h2>${esc(p.name)}</h2>
+      <div class="person-head"><h2>${solo() ? 'Income sources' : esc(p.name)}</h2>
         <div class="person-nums"><span class="big">${money0(personMonth(p.id, m))}</span><small>in ${monthName(m)} · usually ~${money0(projectedPerson(p.id))}/mo</small></div></div>
       <ul class="list">${rows || '<li class="empty">No income sources yet.</li>'}</ul>
       <button class="btn ghost small" data-action="add-source" data-person="${p.id}">+ Add income source</button>
@@ -470,9 +470,9 @@ function renderIncome(){
 
   const entries = S.income.filter(e => ymOf(e.date) === m).sort((a,b) => b.date.localeCompare(a.date));
   const table = entries.length ? `<div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Who</th><th>Source</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead>
+    <thead><tr><th>Date</th>${bothOf('<th>Who</th>', '')}<th>Source</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead>
     <tbody>${entries.map(e => { const s = S.sources.find(x => x.id === e.sourceId); return `<tr>
-      <td>${prettyDate(e.date)}</td><td>${esc(s ? personName(s.personId) : '—')}</td><td>${esc(s ? s.name : 'Removed source')}</td>
+      <td>${prettyDate(e.date)}</td>${solo() ? '' : `<td>${esc(s ? personName(s.personId) : '—')}</td>`}<td>${esc(s ? s.name : 'Removed source')}</td>
       <td class="muted">${esc(e.note || '')}${e.goalId ? ` <span class="chip green">→ ${esc(goalName(e.goalId))}</span>` : ''}</td><td class="num"><b>${money(e.amount)}</b></td>
       <td class="num"><button class="linkish" data-action="del-income" data-id="${e.id}" aria-label="Delete entry">Delete</button></td></tr>`; }).join('')}</tbody></table></div>`
     : `<div class="empty-note">Nothing logged for ${monthName(m)} yet.</div>`;
@@ -507,7 +507,7 @@ function renderExpenses(){
       <div class="row">
         <div class="field"><label for="le-amt">Amount</label><input id="le-amt" name="amount" inputmode="decimal" placeholder="$0.00" required></div>
         <div class="field"><label for="le-cat">Category</label><select id="le-cat" name="category">${catOptions(S.expenseCategories)}</select></div>
-        <div class="field"><label for="le-who">Who paid</label><select id="le-who" name="personId">${whoOptions()}</select></div>
+        ${solo() ? '' : `<div class="field"><label for="le-who">Who paid</label><select id="le-who" name="personId">${whoOptions()}</select></div>`}
         <div class="field"><label for="le-date">Date</label><input id="le-date" type="date" name="date" value="${defaultDateFor(m)}" required></div>
         <div class="field wide"><label for="le-note">Note (optional)</label><input id="le-note" name="note" placeholder="e.g. Kroger run"></div>
         <button class="btn orange" type="submit">Log expense</button>
@@ -515,9 +515,9 @@ function renderExpenses(){
     </form>
     <div class="grid-2" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
       <div class="card"><h3 style="margin-bottom:8px">Spent in ${monthName(m)}</h3>
-        ${entries.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>What</th><th>Who</th><th class="num">Amount</th><th></th></tr></thead><tbody>
+        ${entries.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>What</th>${bothOf('<th>Who</th>', '')}<th class="num">Amount</th><th></th></tr></thead><tbody>
           ${entries.map(e => `<tr><td>${prettyDate(e.date)}</td><td><b>${esc(e.category)}</b>${e.billId ? ' <span class="chip">Bill</span>' : ''}<br><small>${esc(e.note || '')}</small></td>
-          <td>${esc(personName(e.personId))}</td><td class="num"><b>${money(e.amount)}</b></td>
+          ${solo() ? '' : `<td>${esc(personName(e.personId))}</td>`}<td class="num"><b>${money(e.amount)}</b></td>
           <td class="num"><button class="linkish" data-action="del-expense" data-id="${e.id}">Delete</button></td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty-note">No spending logged for ${monthName(m)} yet.</div>`}
       </div>
@@ -545,10 +545,10 @@ function renderBills(){
       <small>Marking a bill paid logs it as an expense for that month.</small>
     </div>
     <div class="card"><div class="table-wrap"><table>
-      <thead><tr><th>Bill</th><th>How often</th><th>Due</th><th>Paid by</th><th class="num">Amount</th><th class="num">Per month</th><th class="num">${monthName(m)}</th><th></th></tr></thead>
+      <thead><tr><th>Bill</th><th>How often</th><th>Due</th>${bothOf('<th>Paid by</th>', '')}<th class="num">Amount</th><th class="num">Per month</th><th class="num">${monthName(m)}</th><th></th></tr></thead>
       <tbody>${list.map(b => { const paid = billPayment(b.id, m); return `<tr class="${b.active === false ? 'inactive' : ''}">
         <td><b>${esc(b.name)}</b><br><small>${esc(b.category)}</small></td>
-        <td>${FREQ[b.frequency]}</td><td>${b.dueDay ? 'Day ' + b.dueDay : '—'}</td><td>${esc(personName(b.personId))}</td>
+        <td>${FREQ[b.frequency]}</td><td>${b.dueDay ? 'Day ' + b.dueDay : '—'}</td>${solo() ? '' : `<td>${esc(personName(b.personId))}</td>`}
         <td class="num">${money(b.amount)}</td><td class="num">${money0(billMonthly(b))}</td>
         <td class="num">${b.active === false ? '<small>Paused</small>' : `<button class="btn small ghost bill-status ${paid ? 'paid' : ''}" data-action="toggle-bill" data-id="${b.id}">${paid ? '✓ Paid' : 'Mark paid'}</button>`}</td>
         <td class="num"><button class="linkish" data-action="edit-bill" data-id="${b.id}">Edit</button></td></tr>`; }).join('')}</tbody>
@@ -565,7 +565,7 @@ function goalCard(g){
       <div class="item-side"><b>${money0(saved)}</b><br><small>of ${money0(g.target)}</small></div></div>
     <div class="progress ${g.type}"><span style="width:${pct}%"></span></div>
     <div class="goal-nums"><span>${Math.round(pct)}% there</span><span>${saved >= g.target ? 'Goal reached!' : money0(g.target - saved) + ' to go'}</span></div>
-    ${by.length ? `<div class="contribs">${by.map(([n,v]) => `<span class="chip">${esc(n)} ${money0(v)}</span>`).join('')}</div>` : ''}
+    ${by.length && !solo() ? `<div class="contribs">${by.map(([n,v]) => `<span class="chip">${esc(n)} ${money0(v)}</span>`).join('')}</div>` : ''}
   </section>`;
 }
 function renderGoals(){
@@ -590,7 +590,7 @@ function renderInsights(){
 
   const srcRows = S.people.flatMap(p => S.sources.filter(s => s.personId === p.id).map(s => {
     const avg = sourceAverage(s);
-    return `<tr class="${s.active === false ? 'inactive' : ''}"><td>${esc(p.name)}</td><td><b>${esc(s.name)}</b></td><td>${TYPES[s.type]}</td><td>${s.kind === 'fixed' ? 'Steady' : 'Varies'}</td>
+    return `<tr class="${s.active === false ? 'inactive' : ''}">${solo() ? '' : `<td>${esc(p.name)}</td>`}<td><b>${esc(s.name)}</b></td><td>${TYPES[s.type]}</td><td>${s.kind === 'fixed' ? 'Steady' : 'Varies'}</td>
       <td class="num">${s.expected ? money0(s.expected) : '—'}</td><td class="num">${avg == null ? '—' : money0(avg)}</td><td class="num"><b>${money0(projectSource(s))}</b></td></tr>`;
   })).join('');
 
@@ -611,13 +611,13 @@ function renderInsights(){
     </div>
 
     <div class="grid-3" style="margin-top:16px">
-      <div class="card"><h3>Who brings in what</h3><div class="chart-small"><canvas id="ch-person"></canvas></div></div>
+      ${solo() ? '' : '<div class="card"><h3>Who brings in what</h3><div class="chart-small"><canvas id="ch-person"></canvas></div></div>'}
       <div class="card"><h3>Income by kind of work</h3><div class="chart-small"><canvas id="ch-type"></canvas></div></div>
       <div class="card"><h3>Spending by category</h3><small>Last 3 months</small><div class="chart-small tall"><canvas id="ch-cat"></canvas></div></div>
     </div>
 
     <div class="card" style="margin-top:16px"><h3 style="margin-bottom:8px">Every income source</h3>
-      ${srcRows ? `<div class="table-wrap"><table><thead><tr><th>Who</th><th>Source</th><th>Kind</th><th>Pay</th><th class="num">Your estimate</th><th class="num">3-month avg</th><th class="num">Forecast / mo</th></tr></thead><tbody>${srcRows}</tbody></table></div>` : '<div class="empty-note">Add income sources on the Income tab.</div>'}
+      ${srcRows ? `<div class="table-wrap"><table><thead><tr>${bothOf('<th>Who</th>', '')}<th>Source</th><th>Kind</th><th>Pay</th><th class="num">Your estimate</th><th class="num">3-month avg</th><th class="num">Forecast / mo</th></tr></thead><tbody>${srcRows}</tbody></table></div>` : '<div class="empty-note">Add income sources on the Income tab.</div>'}
     </div>`;
 
   if(view.tab === 'insights') requestAnimationFrame(drawCharts);
@@ -681,7 +681,7 @@ function drawCharts(){
       data:keys.map(k => Math.round(sum(S.sources.filter(s => s.personId === p.id && s.type === k).map(projectSource)))) }));
     if(sum(datasets.flatMap(d => d.data)) > 0) charts.push(new Chart(tc, { type:'bar',
       data:{ labels:keys.map(k => TYPES[k]), datasets },
-      options:{ maintainAspectRatio:false, plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${money0(c.parsed.y)}/mo` } } },
+      options:{ maintainAspectRatio:false, plugins:{ legend:{position:'bottom', display:!solo()}, tooltip:{ callbacks:{ label: c => solo() ? `${money0(c.parsed.y)}/mo` : `${c.dataset.label}: ${money0(c.parsed.y)}/mo` } } },
         scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, grid:{color:'#EFE3CF'}, ticks:{callback: v => money0(v)}} } } }));
     else tc.parentElement.innerHTML = '<div class="empty-note">No income forecast yet.</div>';
   }
@@ -760,7 +760,7 @@ function billDialog(bill){
     <div class="row">
       <div class="field"><label>Category</label><select name="category">${catOptions(S.billCategories, b.category)}</select></div>
       <div class="field"><label>Due day of month</label><input name="dueDay" type="number" min="1" max="31" value="${b.dueDay || ''}" placeholder="1–31"></div>
-      <div class="field"><label>Who pays</label><select name="personId">${whoOptions(b.personId)}</select></div>
+      ${solo() ? '' : `<div class="field"><label>Who pays</label><select name="personId">${whoOptions(b.personId)}</select></div>`}
     </div>
     <label class="check"><input type="checkbox" name="active" ${b.active !== false ? 'checked' : ''}> Still paying this</label>
     <div class="dlg-actions">
@@ -772,7 +772,7 @@ function billDialog(bill){
       if(!name){ toast('Give this bill a name.'); return false; }
       if(isNaN(amount) || amount <= 0){ toast('Enter the bill amount as a number.'); return false; }
       const dd = parseInt(fd.get('dueDay'), 10);
-      const data = { name, amount, frequency:fd.get('frequency'), category:fd.get('category'), dueDay:(dd >= 1 && dd <= 31) ? dd : null, personId:fd.get('personId'), active:fd.get('active') === 'on' };
+      const data = { name, amount, frequency:fd.get('frequency'), category:fd.get('category'), dueDay:(dd >= 1 && dd <= 31) ? dd : null, personId:fd.get('personId') || defaultWho(), active:fd.get('active') === 'on' };
       if(bill) Object.assign(bill, data); else S.bills.push({ id:uid(), ...data });
       commit(bill ? 'Bill updated' : 'Bill added');
     });
@@ -781,11 +781,13 @@ function billDialog(bill){
 function settingsDialog(firstRun){
   const [a,b] = S.people;
   openDialog(firstRun ? 'Welcome! Who’s budgeting?' : 'Settings', `
-    ${firstRun ? '<p class="muted">Add your name. Add a second name if you’re budgeting with a partner, or leave it blank if it’s just you. You can change this later in settings.</p>' : ''}
+    <div class="field"><label>Who is this budget for?</label>
+      <div class="row" style="gap:14px;align-items:center"><label class="check"><input type="radio" name="mode" value="solo" ${b ? '' : 'checked'}> Just me</label><label class="check"><input type="radio" name="mode" value="shared" ${b ? 'checked' : ''}> Me and a partner</label></div></div>
     <div class="row">
       <div class="field"><label>Your name</label><input name="p1" value="${esc(a.name === 'Person 1' ? '' : a.name)}" placeholder="Name" required></div>
-      <div class="field"><label>Partner (optional)</label><input name="p2" value="${esc(b && b.name !== 'Person 2' ? b.name : '')}" placeholder="Leave blank if it’s just you"></div>
+      <div class="field" id="p2-field" ${b ? '' : 'hidden'}><label>Partner’s name</label><input name="p2" value="${esc(b && b.name !== 'Person 2' ? b.name : '')}" placeholder="Name"></div>
     </div>
+    ${firstRun ? '<p class="muted">You can change this later in settings.</p>' : ''}
     <div class="dlg-actions"><button type="submit" class="btn" name="go" value="save">${firstRun ? 'Get started' : 'Save names'}</button></div>
     <hr class="divider">
     <div><h3>Try it out</h3><p class="muted" style="margin:4px 0 8px">Fill the app with made-up data to see how the charts work. This replaces everything except your names.</p>
@@ -798,7 +800,9 @@ function settingsDialog(firstRun){
       <div class="row" style="gap:8px"><button type="button" class="btn ghost small" data-action="export">Download backup</button><button type="button" class="btn ghost small" data-action="import">Restore from backup</button><button type="button" class="btn danger small" data-action="reset">Erase everything</button></div></div>`}`,
     (fd, submitter) => {
       if(submitter && submitter.name !== 'go') return false;
-      const n1 = String(fd.get('p1') || '').trim(), n2 = String(fd.get('p2') || '').trim();
+      const n1 = String(fd.get('p1') || '').trim(), shared = fd.get('mode') === 'shared';
+      const n2 = shared ? String(fd.get('p2') || '').trim() : '';
+      if(shared && !n2){ toast('Enter your partner’s name.'); return false; }
       let warn = '';
       if(n1) S.people[0].name = n1;
       if(n2){
@@ -823,11 +827,11 @@ function accountSection(){
   if(!Cloud.user) return `<p class="muted" style="margin:4px 0 8px">Sign in and this device joins your shared budget. Whatever is on this device comes along.</p><button type="button" class="btn small" data-action="sign-in">Sign in</button>`;
   return `<p class="muted" style="margin:4px 0 8px">Signed in as <b>${esc(Cloud.user.email)}</b>, staying signed in on this device.</p>
     <div id="members-box"><small>Loading who’s in this budget…</small></div>
-    <div class="row" style="gap:8px;margin-top:10px;align-items:flex-end">
+    ${solo() ? '<span class="hint">Sign in with this same login on your other devices to see the same budget.</span>' : `<div class="row" style="gap:8px;margin-top:10px;align-items:flex-end">
       <div class="field"><label for="invite-email">Add your partner by email</label><input id="invite-email" type="email" placeholder="their@email.com"></div>
       <button type="button" class="btn small" data-action="invite">Add</button>
     </div>
-    <span class="hint">They create their own login with that email (or sign in if they already have one) and they’re in.</span>
+    <span class="hint">They create their own login with that email (or sign in if they already have one) and they’re in.</span>`}
     <div style="margin-top:10px"><button type="button" class="btn ghost small" data-action="sign-out">Sign out</button></div>`;
 }
 async function renderMembers(){
@@ -917,8 +921,8 @@ function goalDialog(g){
     </div>
     <hr class="divider">
     <h3>Where the money came from</h3>
-    ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Who</th><th>What</th><th class="num">Amount</th><th></th></tr></thead><tbody>
-      ${rows.map(r => `<tr><td>${prettyDate(r.date)}</td><td>${esc(personName(r.personId))}</td><td>${esc(r.label)}${r.kind === 'income' ? ' <span class="chip">Income</span>' : ''}</td><td class="num"><b>${money(r.amount)}</b></td>
+    ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th>${bothOf('<th>Who</th>', '')}<th>What</th><th class="num">Amount</th><th></th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${prettyDate(r.date)}</td>${solo() ? '' : `<td>${esc(personName(r.personId))}</td>`}<td>${esc(r.label)}${r.kind === 'income' ? ' <span class="chip">Income</span>' : ''}</td><td class="num"><b>${money(r.amount)}</b></td>
         <td class="num"><button type="button" class="linkish" data-action="remove-contrib" data-goal="${g.id}" data-kind="${r.kind}" data-id="${r.id}">Remove</button></td></tr>`).join('')}
     </tbody></table></div><span class="hint">Removing an income entry here only takes it off the goal; it stays logged as income.</span>` : '<div class="empty-note">Nothing yet. Add money here, or log income with “Put toward a goal” checked.</div>'}
     <div class="dlg-actions"><button type="button" class="btn ghost" data-action="close-dialog">Close</button></div>`, () => {});
@@ -928,7 +932,7 @@ function contribDialog(g){
   openDialog(`Add money to ${g.name}`, `
     <div class="row">
       <div class="field"><label>Amount</label><input name="amount" inputmode="decimal" placeholder="$0.00" required></div>
-      <div class="field"><label>Who</label><select name="personId">${whoOptions()}</select></div>
+      ${solo() ? '' : `<div class="field"><label>Who</label><select name="personId">${whoOptions()}</select></div>`}
       <div class="field"><label>Date</label><input type="date" name="date" value="${todayStr()}" required></div>
     </div>
     <div class="field"><label>Where it came from</label><input name="note" placeholder="e.g. Sold the old amp on Marketplace"></div>
@@ -937,7 +941,7 @@ function contribDialog(g){
       const amount = num(fd.get('amount')), date = fd.get('date');
       if(isNaN(amount) || amount <= 0){ toast('Enter an amount.'); return false; }
       if(!date){ toast('Pick a date.'); return false; }
-      S.contributions.push({ id:uid(), goalId:g.id, personId:fd.get('personId'), amount, date, note:String(fd.get('note') || '').trim() });
+      S.contributions.push({ id:uid(), goalId:g.id, personId:fd.get('personId') || defaultWho(), amount, date, note:String(fd.get('note') || '').trim() });
       commit(`${money(amount)} added to ${g.name}`);
       setTimeout(() => goalDialog(S.goals.find(x => x.id === g.id)), 50);
     });
@@ -1095,7 +1099,10 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-action]'); if(t && actions[t.dataset.action]){ e.preventDefault(); actions[t.dataset.action](t, e); return; }
   const tab = e.target.closest('.tab'); if(tab){ view.tab = tab.dataset.tab; renderAll(); }
 });
-document.addEventListener('change', e => { if(e.target.id === 'li-togoal'){ const sel = $('#li-goal'); if(sel) sel.hidden = !e.target.checked; } });
+document.addEventListener('change', e => {
+  if(e.target.id === 'li-togoal'){ const sel = $('#li-goal'); if(sel) sel.hidden = !e.target.checked; }
+  if(e.target.name === 'mode'){ const f = $('#p2-field'); if(f){ f.hidden = e.target.value !== 'shared'; if(!f.hidden) f.querySelector('input').focus(); } }
+});
 document.addEventListener('keydown', e => {
   if(e.key === 'Enter' && e.target.classList && e.target.classList.contains('goal')){ e.preventDefault(); e.target.click(); return; }
   if(!e.target.classList.contains('tab') || !['ArrowLeft','ArrowRight'].includes(e.key)) return;
@@ -1116,10 +1123,10 @@ document.addEventListener('submit', e => {
     const keep = fd.get('sourceId'); commit(entry.goalId ? `Income logged and put toward ${goalName(entry.goalId)}` : 'Income logged');
     const sel = $('#li-src'); if(sel) sel.value = keep; $('#li-amt')?.focus();
   } else if(kind === 'log-expense'){
-    const cat = fd.get('category'), who = fd.get('personId');
+    const cat = fd.get('category'), who = fd.get('personId') || defaultWho();
     S.expenses.push({ id:uid(), date, amount, category:cat, personId:who, note:String(fd.get('note') || '').trim() });
     commit('Expense logged');
-    $('#le-cat').value = cat; $('#le-who').value = who; $('#le-amt')?.focus();
+    $('#le-cat').value = cat; if($('#le-who')) $('#le-who').value = who; $('#le-amt')?.focus();
   }
   if(ymOf(date) !== view.month) toast(`Logged to ${monthLabel(ymOf(date))}`);
 });
