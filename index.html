@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Household Budget</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -80,7 +80,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .field.wide{flex:2 1 220px}
 .field label{font-size:.85rem;font-weight:700;color:var(--ink-soft)}
 .field .hint{font-size:.8rem;color:var(--ink-soft)}
-input,select,textarea{border:2px solid var(--line);background:#fff;border-radius:12px;padding:9px 11px;width:100%}
+input,select,textarea{border:2px solid var(--line);background:#fff;border-radius:12px;padding:9px 11px;width:100%;font-size:16px} /* 16px+ stops iOS Safari zooming into fields */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 input:focus,select:focus{border-color:var(--green-deep);outline:none}
 .check{display:flex;gap:8px;align-items:center;font-weight:600}
 .check input{width:auto}
@@ -211,6 +212,7 @@ const SUPABASE_URL = 'https://vthqrbzaqhrfcuembkvz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_RAi9_WMd5uIPutL3H5cgkg_ImuNj0UG'; // publishable key: safe in the page, row security protects data
 const STORAGE_KEY = 'household-budget-v1';
 const SKIP_KEY = 'household-budget-skip-signin';
+const USER_KEY = 'household-budget-email'; // remembers the last email used on this device
 const Store = {
   load(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } },
   save(data){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }catch(e){ return false; } }
@@ -733,16 +735,17 @@ function settingsDialog(firstRun){
 function accountSection(){
   if(!Cloud.enabled()) return '<p class="muted" style="margin:4px 0 0">Sync isn’t set up in this copy of the app. Data stays in this browser.</p>';
   if(!Cloud.user) return `<p class="muted" style="margin:4px 0 8px">Sign in with your shared login and this device joins the same budget. Whatever is on this device comes along.</p><button type="button" class="btn small" data-action="sign-in">Sign in</button>`;
-  return `<p class="muted" style="margin:4px 0 8px">Signed in as <b>${esc(Cloud.user.email)}</b>. Sign in with the same email and password on the other phone and you’ll both see the same budget.</p>
+  return `<p class="muted" style="margin:4px 0 8px">Signed in as <b>${esc(Cloud.user.email)}</b> and staying signed in on this device. Use the same email and password on the other phone and you’ll both see the same budget.</p>
     <button type="button" class="btn ghost small" data-action="sign-out">Sign out</button>`;
 }
 
 function signInDialog(){
   const local = S.income.length || S.expenses.length || S.bills.length || S.sources.length;
+  let remembered = ''; try{ remembered = localStorage.getItem(USER_KEY) || ''; }catch(e){}
   openDialog('Sign in to sync', `
     <p class="muted">One shared login for the two of you. Sign in on both phones and you see the same budget, live.${local ? ' The data already on this device comes along.' : ''}</p>
-    <div class="field"><label>Email</label><input name="email" type="email" autocomplete="email" required></div>
-    <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" minlength="6" required><span class="hint">At least 6 characters.</span></div>
+    <div class="field"><label>Email</label><input name="email" type="email" autocomplete="username" autocapitalize="none" value="${esc(remembered)}" required></div>
+    <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" minlength="6" required><span class="hint">At least 6 characters. You stay signed in on this device afterward.</span></div>
     <div class="dlg-actions">
       <button type="submit" class="btn ghost" name="go" value="local">Skip, use this device only</button>
       <button type="submit" class="btn ghost" name="go" value="signup">Create the login</button>
@@ -750,14 +753,16 @@ function signInDialog(){
     </div>`, (fd, submitter) => {
       const go = submitter ? submitter.value : 'signin';
       if(go === 'local'){ try{ localStorage.setItem(SKIP_KEY, '1'); }catch(e){} if(!S.onboarded) setTimeout(() => settingsDialog(true), 50); return; }
-      const email = String(fd.get('email') || '').trim(), password = String(fd.get('password') || '');
-      if(!email || password.length < 6){ toast('Enter your email and a password of at least 6 characters.'); return false; }
+      const email = String(fd.get('email') || '').trim().toLowerCase(), password = String(fd.get('password') || '');
+      if(!email.includes('@')){ toast('Enter your email.'); return false; }
+      if(password.length < 6){ toast('Password needs at least 6 characters.'); return false; }
+      try{ localStorage.setItem(USER_KEY, email); }catch(e){}
       const btns = dlgForm.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
       (go === 'signup' ? Cloud.signUp(email, password) : Cloud.signIn(email, password)).then(user => {
         if(!user){ closeDialog(); toast('Check your email to confirm the login, then sign in.'); return; }
         try{ localStorage.removeItem(SKIP_KEY); }catch(e){}
         closeDialog(); return connectHousehold();
-      }).catch(e => { btns.forEach(b => b.disabled = false); toast(e.message || 'Sign-in failed.'); });
+      }).catch(e => { btns.forEach(b => b.disabled = false); const m = String(e.message || ''); toast(/invalid login/i.test(m) ? 'Wrong email or password. If this is the first time, use “Create the login”.' : /already registered/i.test(m) ? 'That email already has a login. Try signing in instead.' : (m || 'Sign-in failed.')); });
       return false;
     });
 }

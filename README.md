@@ -16,7 +16,7 @@ It's a single `index.html` with no build step.
 
 ## Run it
 
-Open `index.html` in a browser, or deploy it (below). Sign in with the shared login on each device and both see the same budget, updated live. Data is also cached in the browser, so the last-loaded budget still shows if you're offline.
+Open `index.html` in a browser, or deploy it (below). Sign in with the shared email and password on each device and both see the same budget, updated live. Each device stays signed in. Data is also cached in the browser, so the last-loaded budget still shows if you're offline.
 
 To run it with no sync at all, blank out `SUPABASE_URL` and `SUPABASE_KEY` near the top of the script.
 
@@ -31,7 +31,8 @@ To run it with no sync at all, blank out `SUPABASE_URL` and `SUPABASE_KEY` near 
 The backend lives in the Smalljoy Supabase project, in tables prefixed `budget_` so they stay separate from Smalljoy's own. The schema is in `supabase/schema.sql` and has already been applied.
 
 How it works:
-- One shared login for the household. The first sign-in creates the household row and moves whatever was on that device into it.
+- One shared email login for the household.
+- The first sign-in creates the household row and moves whatever was on that device into it. Sessions persist in the browser, so you're signed in automatically next time.
 - All reads and writes go through `Store` (browser cache) and `Cloud` (Supabase) at the top of the script. Each change saves locally right away and pushes the whole budget as one JSON document a moment later.
 - Realtime is on for `budget_households`, so an edit on one phone appears on the other without a refresh.
 - Row-level security means only signed-in members of a household can read or change its row. The publishable key in the page is meant to be public.
