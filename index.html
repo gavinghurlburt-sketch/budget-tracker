@@ -224,7 +224,7 @@ dialog::backdrop{background:rgba(74,59,44,.35)}
 
 <dialog id="dlg"><form id="dlg-form" novalidate></form></dialog>
 <input type="file" id="import-file" accept="application/json,.json" hidden>
-<input type="file" id="receipt-file" accept="image/*" capture="environment" hidden>
+<input type="file" id="receipt-file" accept="image/*" hidden>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -503,7 +503,7 @@ function renderExpenses(){
     <div class="panel-intro"><div><h2>Expenses</h2><p>Everyday spending like groceries, gas, and nights out. Bills you mark as paid show up here too.</p></div></div>
     <form class="quick" data-form="log-expense">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0">Log something you spent</h3>
-        ${Cloud.user ? '<button type="button" class="btn ghost small" data-action="scan-receipt" id="scan-btn">📷 Scan a receipt</button>' : ''}</div>
+        ${Cloud.user ? '<button type="button" class="btn ghost small" data-action="scan-receipt" id="scan-btn">📷 Scan receipt or statement</button>' : ''}</div>
       <div class="row">
         <div class="field"><label for="le-amt">Amount</label><input id="le-amt" name="amount" inputmode="decimal" placeholder="$0.00" required></div>
         <div class="field"><label for="le-cat">Category</label><select id="le-cat" name="category">${catOptions(S.expenseCategories)}</select></div>
@@ -1142,7 +1142,7 @@ $('#import-file').addEventListener('change', async e => {
 window.addEventListener('resize', () => { if(view.tab === 'insights') charts.forEach(c => c.resize()); });
 
 /* ---------- receipt scanning (Claude, via the scan-receipt edge function) ---------- */
-function shrinkImage(file, max = 1600){
+function shrinkImage(file, max = 2000){
   return new Promise((resolve, reject) => {
     const img = new Image(); const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -1164,6 +1164,11 @@ $('#receipt-file').addEventListener('change', async e => {
     const { data, error } = await Cloud.client.functions.invoke('scan-receipt', { body:{ image, media_type:'image/jpeg', categories:S.expenseCategories, today:todayStr() } });
     if(error){ let msg = error.message; try{ const j = await error.context.json(); if(j && j.error) msg = j.error; }catch(_){ } throw new Error(msg); }
     if(data.error) throw new Error(data.error);
+    if(data.kind === 'statement' && Array.isArray(data.transactions)){
+      const tx = data.transactions.filter(t => t && isFinite(+t.amount) && +t.amount > 0);
+      if(!tx.length){ toast('Couldn’t find any transactions in that screenshot.'); return; }
+      statementDialog(tx); return;
+    }
     if(data.amount == null){ toast('Couldn’t find a total on that. Try a clearer photo.'); return; }
     const amt = $('#le-amt'), date = $('#le-date'), cat = $('#le-cat'), note = $('#le-note');
     if(amt) amt.value = Number(data.amount).toFixed(2);
@@ -1173,8 +1178,43 @@ $('#receipt-file').addEventListener('change', async e => {
     if(amt) amt.focus();
     toast(data.confidence === 'low' ? 'Filled in, but double-check it.' : 'Filled in. Check it, then tap Log expense.');
   }catch(err){ toast(err.message || 'Scan failed.'); }
-  finally{ if(btn){ btn.disabled = false; btn.textContent = '📷 Scan a receipt'; } }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = '📷 Scan receipt or statement'; } }
 });
+
+/* review table for a bank / card screenshot with several transactions */
+function statementDialog(tx){
+  const rows = tx.map((t, i) => {
+    const credit = t.type === 'credit';
+    const date = (t.date && /^\d{4}-\d{2}-\d{2}$/.test(t.date)) ? t.date : todayStr();
+    return `<tr class="${credit ? 'inactive' : ''}">
+      <td><input type="checkbox" name="use-${i}" ${credit ? '' : 'checked'} aria-label="Log this one"></td>
+      <td><input type="date" name="date-${i}" value="${date}" style="min-width:130px"></td>
+      <td><input name="note-${i}" value="${esc(t.merchant || '')}" placeholder="What">${credit ? '<br><span class="chip green">Money in</span>' : ''}</td>
+      <td><select name="cat-${i}">${catOptions(S.expenseCategories, S.expenseCategories.includes(t.category) ? t.category : 'Other')}</select></td>
+      <td class="num"><input name="amt-${i}" inputmode="decimal" value="${Number(t.amount).toFixed(2)}" style="width:96px;text-align:right"></td>
+    </tr>`;
+  }).join('');
+  openDialog(`Found ${tx.length} transaction${tx.length === 1 ? '' : 's'}`, `
+    <p class="muted">Check the ones to log as expenses and fix anything that looks off. Lines marked “Money in” are unchecked, since they’re deposits or refunds, not spending.</p>
+    ${solo() ? '' : `<div class="field" style="max-width:220px"><label>Who paid</label><select name="personId">${whoOptions()}</select></div>`}
+    <div class="table-wrap" style="max-height:50vh;overflow:auto"><table><thead><tr><th></th><th>Date</th><th>What</th><th>Category</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="dlg-actions"><button type="button" class="btn ghost" data-action="close-dialog">Cancel</button><button type="submit" class="btn orange">Log checked expenses</button></div>`,
+    fd => {
+      const who = fd.get('personId') || defaultWho();
+      let n = 0, total = 0;
+      tx.forEach((t, i) => {
+        if(fd.get(`use-${i}`) !== 'on') return;
+        const amount = num(fd.get(`amt-${i}`)), date = fd.get(`date-${i}`);
+        if(isNaN(amount) || amount <= 0 || !date) return;
+        S.expenses.push({ id:uid(), date, amount, category:fd.get(`cat-${i}`), personId:who, note:String(fd.get(`note-${i}`) || '').trim() });
+        n++; total += amount;
+      });
+      if(!n){ toast('Nothing checked.'); return false; }
+      commit(`Logged ${n} expense${n === 1 ? '' : 's'} (${money(total)})`);
+    });
+  dlg.style.maxWidth = '720px';
+}
+dlg.addEventListener('close', () => { dlg.style.maxWidth = ''; });
 
 /* ---------- start ---------- */
 renderAll();
