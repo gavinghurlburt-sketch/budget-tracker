@@ -153,6 +153,24 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .contribs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .band .aside{background:var(--tan-soft)}
 
+/* scanned statement review list */
+.tx{border-bottom:1.5px dashed var(--line)}
+.tx:last-of-type{border-bottom:0}
+.tx-row{display:flex;align-items:center;gap:10px;padding:10px 2px;width:100%;background:none;border:0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.tx-row:hover{background:var(--tan-soft);border-radius:10px}
+.tx-check{flex:0 0 auto;width:22px;height:22px;margin:0}
+.tx-main{flex:1 1 auto;min-width:0}
+.tx-what{display:block;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-sub{display:block;font-size:.82rem;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.tx-row summary::-webkit-details-marker,.tx-row::-webkit-details-marker{display:none}
+.tx-row{list-style:none}
+.tx-amt{flex:0 0 auto;font-weight:800;white-space:nowrap}
+.tx-caret{flex:0 0 auto;color:var(--ink-soft);transition:transform .2s}
+.tx[open] .tx-caret{transform:rotate(90deg)}
+.tx-edit{padding:4px 2px 14px}
+.tx.off .tx-what,.tx.off .tx-sub,.tx.off .tx-amt{opacity:.5;text-decoration:line-through}
+.tx-count{font-weight:800}
+
 /* bills */
 .bill-status.paid{background:var(--green-soft);border-color:var(--green);color:var(--green-deep)}
 
@@ -1080,6 +1098,8 @@ const actions = {
   },
   'import': () => $('#import-file').click(),
   'scan-receipt': () => $('#receipt-file').click(),
+  'tx-all': () => { document.querySelectorAll('.tx-check').forEach(c => c.checked = true); txData.forEach((t, i) => txSummary(i)); },
+  'tx-none': () => { document.querySelectorAll('.tx-check').forEach(c => c.checked = false); txData.forEach((t, i) => txSummary(i)); },
   'sign-in': () => signInDialog(),
   'invite': () => {
     const input = $('#invite-email'), email = String(input && input.value || '').trim().toLowerCase();
@@ -1099,7 +1119,10 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-action]'); if(t && actions[t.dataset.action]){ e.preventDefault(); actions[t.dataset.action](t, e); return; }
   const tab = e.target.closest('.tab'); if(tab){ view.tab = tab.dataset.tab; renderAll(); }
 });
+document.addEventListener('click', e => { if(e.target.classList && e.target.classList.contains('tx-check')) e.stopPropagation(); }, true);
+document.addEventListener('input', e => { const row = e.target.closest && e.target.closest('.tx'); if(row) txSummary(row.dataset.i); });
 document.addEventListener('change', e => {
+  const row = e.target.closest && e.target.closest('.tx'); if(row) txSummary(row.dataset.i);
   if(e.target.id === 'li-togoal'){ const sel = $('#li-goal'); if(sel) sel.hidden = !e.target.checked; }
   if(e.target.name === 'mode'){ const f = $('#p2-field'); if(f){ f.hidden = e.target.value !== 'shared'; if(!f.hidden) f.querySelector('input').focus(); } }
 });
@@ -1181,24 +1204,57 @@ $('#receipt-file').addEventListener('change', async e => {
   finally{ if(btn){ btn.disabled = false; btn.textContent = '📷 Scan receipt or statement'; } }
 });
 
-/* review table for a bank / card screenshot with several transactions */
+/* review list for a bank / card screenshot with several transactions */
+let txData = [];
+function txSummary(i){
+  const row = document.querySelector(`.tx[data-i="${i}"]`); if(!row) return;
+  const on = row.querySelector('.tx-check').checked;
+  const what = row.querySelector(`[name="note-${i}"]`).value.trim() || 'Untitled';
+  const date = row.querySelector(`[name="date-${i}"]`).value;
+  const cat = row.querySelector(`[name="cat-${i}"]`).value;
+  const amt = num(row.querySelector(`[name="amt-${i}"]`).value);
+  row.querySelector('.tx-what').textContent = what;
+  row.querySelector('.tx-sub').textContent = `${date ? prettyDate(date) : 'No date'} · ${cat}`;
+  row.querySelector('.tx-amt').textContent = isNaN(amt) ? '—' : money(amt);
+  row.classList.toggle('off', !on);
+  const n = [...document.querySelectorAll('.tx-check')].filter(c => c.checked).length;
+  const el = $('#tx-count'); if(el) el.textContent = `${n} of ${txData.length} selected`;
+}
 function statementDialog(tx){
+  txData = tx;
   const rows = tx.map((t, i) => {
     const credit = t.type === 'credit';
     const date = (t.date && /^\d{4}-\d{2}-\d{2}$/.test(t.date)) ? t.date : todayStr();
-    return `<tr class="${credit ? 'inactive' : ''}">
-      <td><input type="checkbox" name="use-${i}" ${credit ? '' : 'checked'} aria-label="Log this one"></td>
-      <td><input type="date" name="date-${i}" value="${date}" style="min-width:130px"></td>
-      <td><input name="note-${i}" value="${esc(t.merchant || '')}" placeholder="What">${credit ? '<br><span class="chip green">Money in</span>' : ''}</td>
-      <td><select name="cat-${i}">${catOptions(S.expenseCategories, S.expenseCategories.includes(t.category) ? t.category : 'Other')}</select></td>
-      <td class="num"><input name="amt-${i}" inputmode="decimal" value="${Number(t.amount).toFixed(2)}" style="width:96px;text-align:right"></td>
-    </tr>`;
+    const cat = S.expenseCategories.includes(t.category) ? t.category : 'Other';
+    const amt = Number(t.amount).toFixed(2);
+    const what = t.merchant || 'Untitled';
+    return `<details class="tx ${credit ? 'off' : ''}" data-i="${i}">
+      <summary class="tx-row">
+        <input type="checkbox" class="tx-check" name="use-${i}" ${credit ? '' : 'checked'} aria-label="Log ${esc(what)}">
+        <span class="tx-main"><span class="tx-what">${esc(what)}</span><span class="tx-sub">${prettyDate(date)} · ${esc(cat)}${credit ? ' · money in' : ''}</span></span>
+        <span class="tx-amt">${money(+amt)}</span><span class="tx-caret">›</span>
+      </summary>
+      <div class="tx-edit">
+        <div class="row">
+          <div class="field wide"><label>What</label><input name="note-${i}" value="${esc(what)}"></div>
+          <div class="field"><label>Amount</label><input name="amt-${i}" inputmode="decimal" value="${amt}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Date</label><input type="date" name="date-${i}" value="${date}"></div>
+          <div class="field"><label>Category</label><select name="cat-${i}">${catOptions(S.expenseCategories, cat)}</select></div>
+        </div>
+      </div>
+    </details>`;
   }).join('');
   openDialog(`Found ${tx.length} transaction${tx.length === 1 ? '' : 's'}`, `
-    <p class="muted">Check the ones to log as expenses and fix anything that looks off. Lines marked “Money in” are unchecked, since they’re deposits or refunds, not spending.</p>
-    ${solo() ? '' : `<div class="field" style="max-width:220px"><label>Who paid</label><select name="personId">${whoOptions()}</select></div>`}
-    <div class="table-wrap" style="max-height:50vh;overflow:auto"><table><thead><tr><th></th><th>Date</th><th>What</th><th>Category</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="dlg-actions"><button type="button" class="btn ghost" data-action="close-dialog">Cancel</button><button type="submit" class="btn orange">Log checked expenses</button></div>`,
+    <p class="muted">Tap any line to edit it. Money coming in is unchecked already.</p>
+    ${solo() ? '' : `<div class="field" style="max-width:200px"><label>Who paid</label><select name="personId">${whoOptions()}</select></div>`}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <span class="tx-count" id="tx-count"></span>
+      <span><button type="button" class="linkish" data-action="tx-all">All</button><button type="button" class="linkish" data-action="tx-none">None</button></span>
+    </div>
+    <div style="max-height:46vh;overflow:auto;margin-top:2px">${rows}</div>
+    <div class="dlg-actions"><button type="button" class="btn ghost" data-action="close-dialog">Cancel</button><button type="submit" class="btn orange">Log checked</button></div>`,
     fd => {
       const who = fd.get('personId') || defaultWho();
       let n = 0, total = 0;
@@ -1212,9 +1268,9 @@ function statementDialog(tx){
       if(!n){ toast('Nothing checked.'); return false; }
       commit(`Logged ${n} expense${n === 1 ? '' : 's'} (${money(total)})`);
     });
-  dlg.style.maxWidth = '720px';
+  tx.forEach((t, i) => txSummary(i));
 }
-dlg.addEventListener('close', () => { dlg.style.maxWidth = ''; });
+
 
 /* ---------- start ---------- */
 renderAll();
