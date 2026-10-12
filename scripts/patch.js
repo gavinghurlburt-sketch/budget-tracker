@@ -48,9 +48,16 @@ const css = `<style>
   html body .dlg-head{position:sticky;top:0;z-index:3;background:var(--paper);padding:calc(env(safe-area-inset-top) + 14px) max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left));}
   html body .dlg-body{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:0;}
   html body .dlg-actions{position:sticky;bottom:0;z-index:3;background:var(--paper);border-top:2px dashed var(--line);margin:6px calc(-1 * max(20px,env(safe-area-inset-left))) 0;padding:12px max(20px,env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 12px);}
+  /* lock the page behind an open form so scrolling can't chain to it */
+  html:has(dialog[open]),html:has(dialog[open]) body{overflow:hidden;overscroll-behavior:none;}
+  html body dialog[open]{overscroll-behavior-y:contain;}
 </style>
 <script>
   ["gesturestart","gesturechange","gestureend"].forEach(function(e){document.addEventListener(e,function(ev){ev.preventDefault();});});
+  document.addEventListener("touchmove",function(ev){
+    var m=document.querySelector("dialog[open]");
+    if(m&&!(ev.target.closest&&ev.target.closest("dialog[open]"))) ev.preventDefault();
+  },{passive:false});
   var _lt=0;document.addEventListener("touchend",function(ev){var n=Date.now();if(n-_lt<300)ev.preventDefault();_lt=n;},{passive:false});
   (function(){
     var H=null;
