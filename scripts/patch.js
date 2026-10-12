@@ -48,6 +48,11 @@ const css = `<style>
   html body .dlg-head{position:sticky;top:0;z-index:3;background:var(--paper);padding:calc(env(safe-area-inset-top) + 14px) max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left));}
   html body .dlg-body{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:0;}
   html body .dlg-actions{position:sticky;bottom:0;z-index:3;background:var(--paper);border-top:2px dashed var(--line);margin:6px calc(-1 * max(20px,env(safe-area-inset-left))) 0;padding:12px max(20px,env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 12px);}
+  /* solid status-bar strip so the clock/battery never sit on top of page text */
+  html body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--bg);z-index:50;pointer-events:none;}
+  /* tags stay on one line instead of splitting into pieces */
+  html body .chip{white-space:nowrap;display:inline-block;line-height:1.5;}
+  html body td:first-child{white-space:nowrap;}
   /* lock the page behind an open form so scrolling can't chain to it */
   html:has(dialog[open]),html:has(dialog[open]) body{overflow:hidden;overscroll-behavior:none;}
   html body dialog[open]{overscroll-behavior-y:contain;}
