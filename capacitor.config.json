@@ -1,0 +1,6 @@
+{
+  "appId": "art.gavingeddes.budgetrr",
+  "appName": "Budgetrr",
+  "webDir": "www",
+  "ios": { "contentInset": "never" }
+}

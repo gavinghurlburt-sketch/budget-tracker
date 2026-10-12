@@ -55,3 +55,14 @@ Setup, one time: create an API key at console.anthropic.com (add a few dollars o
 | income | id, sourceId, date, amount, note |
 | expenses | id, date, amount, category, personId (or `shared`), note, billId? |
 | bills | id, name, amount, frequency, category, dueDay, personId, active |
+
+## iPhone app (sideload)
+
+`index.html` stays the source of truth. The iOS app wraps it with Capacitor (Chart.js, Supabase and fonts are bundled so it runs offline). Needs a Mac with Xcode. Free Apple ID signing expires every 7 days, so reinstall weekly by running over the top (don't delete the app first).
+
+```
+git checkout ios-app
+npm install
+npm run sync        # builds www/ from index.html and syncs the iOS project
+npx cap open ios    # Xcode: pick your team under Signing, choose your iPhone, press Play
+```
