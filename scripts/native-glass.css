@@ -136,6 +136,12 @@ html body .band .in{--wash:var(--g-green);}
 html body .band .out{--wash:var(--g-orange);}
 html body .band .aside{--wash:#9FB3A7;}
 html body .band .net{--wash:transparent;}
+/* value first, its label under it in lower case; every value sits at the top
+   of its cell, so the numbers in a row line up even when a label wraps */
+html body .band > div, html body .card.stat{display:flex; flex-direction:column; justify-content:flex-start;}
+html body .band .num, html body .card.stat .num{order:-1; line-height:1.15;}
+html body .band .lbl, html body .card.stat .lbl{text-transform:lowercase; margin-top:2px;}
+html body .band .net .meter{margin-top:10px;}
 html body .meter{background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(0,0,0,.12);}
 html body .meter span{background:color-mix(in srgb, var(--g-orange) 85%, transparent);}
 
