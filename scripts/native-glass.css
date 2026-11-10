@@ -1,0 +1,240 @@
+/* ===== Glass redesign =====
+   One continuous surface: the whole app sits on a single softly lit backdrop,
+   sections flow on it separated by space and thin solid hairlines instead of
+   boxed cards, and every button and control is frosted glass with a coloured
+   tint (the same look as the Us app, borrowed from creatrr).
+   Loaded last by patch.js so it wins over the page's own styles.
+   Palette stays Budgetrr's: light green, light orange and tan. */
+
+:root{
+  --g-fill: rgba(74,59,44,.06);
+  --g-fill-2: rgba(74,59,44,.11);
+  --g-ring: rgba(74,59,44,.10);
+  --g-hair: rgba(74,59,44,.12);
+  --g-edge: rgba(255,255,255,.9);
+  --g-blur: blur(14px) saturate(1.6);
+  --g-glow: 46%;
+  --surface: #F7EEDF;          /* the one backdrop colour */
+  --sheet: #FBF5EA;            /* what glass sheets are tinted with */
+  --g-green: #7FC27A;          /* tints for glass (a touch stronger than the soft fills) */
+  --g-orange: #F2A65A;
+  --g-tan: #D7B78A;
+}
+
+/* ---------- the one backdrop ---------- */
+html{background:var(--surface);}
+html body{background:transparent;}
+/* three soft colour orbs behind everything, each drifting on its own slow loop.
+   Each orb is its own layer (#glowOrbs, added by patch.js) and only transform moves,
+   so the phone's GPU does the work. Knobs: --g-glow (strength), each orb's
+   width/height (size), left/top (where it sits), and the keyframes (how it floats). */
+#glowOrbs{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;}
+#glowOrbs i{position:absolute; display:block; border-radius:50%; will-change:transform;
+  animation:var(--orb-path) var(--orb-time) ease-in-out infinite alternate;}
+#glowOrbs i:nth-child(1){ /* top left: green */
+  width:110vw; height:74vh; left:-54vw; top:-44vh; --orb-path:orbA; --orb-time:26s;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--green) var(--g-glow), transparent), transparent);}
+#glowOrbs i:nth-child(2){ /* right side: orange */
+  width:96vw; height:70vh; left:62vw; top:-6vh; --orb-path:orbB; --orb-time:34s;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--orange) calc(var(--g-glow) * .8), transparent), transparent);}
+#glowOrbs i:nth-child(3){ /* bottom left: tan */
+  width:124vw; height:86vh; left:-40vw; top:70vh; --orb-path:orbC; --orb-time:41s;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--tan) calc(var(--g-glow) * 1.3), transparent), transparent);}
+@keyframes orbA{
+  0%{transform:translate3d(0,0,0) scale(1);}
+  35%{transform:translate3d(14vw,9vh,0) scale(1.08);}
+  70%{transform:translate3d(4vw,18vh,0) scale(.94);}
+  100%{transform:translate3d(18vw,4vh,0) scale(1.05);}
+}
+@keyframes orbB{
+  0%{transform:translate3d(0,0,0) scale(1);}
+  30%{transform:translate3d(-16vw,12vh,0) scale(.93);}
+  65%{transform:translate3d(-6vw,26vh,0) scale(1.09);}
+  100%{transform:translate3d(-20vw,8vh,0) scale(1);}
+}
+@keyframes orbC{
+  0%{transform:translate3d(0,0,0) scale(1);}
+  40%{transform:translate3d(18vw,-14vh,0) scale(1.07);}
+  75%{transform:translate3d(30vw,-4vh,0) scale(.95);}
+  100%{transform:translate3d(10vw,-20vh,0) scale(1.04);}
+}
+@media (prefers-reduced-motion: reduce){ #glowOrbs i{animation:none !important;} }
+/* the status-bar strip is frosted, not a solid band */
+html body::before{background:color-mix(in srgb, var(--surface) 62%, transparent);
+  -webkit-backdrop-filter:blur(20px) saturate(1.6); backdrop-filter:blur(20px) saturate(1.6);}
+
+/* ---------- buttons: all glass pills ---------- */
+html body .btn{border:0; border-radius:999px; color:var(--ink); font-weight:800; padding:0 18px;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  background-color:color-mix(in srgb, var(--g-green) 30%, transparent);
+  -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 60%, transparent), 0 6px 20px color-mix(in srgb, var(--g-green) 22%, transparent);}
+html body .btn:hover{filter:none;}
+html body .btn.orange{background-color:color-mix(in srgb, var(--g-orange) 32%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-orange) 62%, transparent), 0 6px 20px color-mix(in srgb, var(--g-orange) 22%, transparent);}
+html body .btn.ghost,
+html body .btn.ghost:hover{background-color:var(--g-fill); font-weight:700;
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .btn.small{padding:0 14px; font-size:.86rem;}
+html body .btn.danger,
+html body .btn.danger:hover{color:var(--orange-deep); font-weight:700;
+  background-color:color-mix(in srgb, var(--orange-deep) 10%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--orange-deep) 32%, transparent);}
+html body .btn.bill-status.paid{color:var(--green-deep);
+  background-color:color-mix(in srgb, var(--g-green) 26%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 55%, transparent);}
+html body .btn[disabled], html body button:disabled{opacity:.45;}
+html body .linkish{border-radius:999px; padding:6px 12px; background-color:var(--g-fill);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .linkish:hover{background-color:var(--g-fill-2);}
+
+/* header: glass month switcher + round glass icon buttons */
+html body .top{margin-bottom:14px;}
+html body .month-nav{border:0; padding:4px;
+  background-color:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .month-nav .icon-btn{width:38px; height:38px; font-size:1.3rem;}
+html body .icon-btn:hover{background:var(--g-fill-2);}
+html body .settings-btn,
+html body .dlg-head .icon-btn{border:0; border-radius:50%;
+  background-color:var(--g-fill);
+  -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .sync-pill{border:0; background-color:var(--g-fill);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+
+/* ---------- this month's numbers: open figures, no box ---------- */
+html body .band{background:none; border:0; border-radius:0; overflow:visible; gap:0 2px; margin-bottom:22px;
+  border-bottom:1px solid var(--g-hair); padding-bottom:6px;}
+html body .band > div,
+html body .band > div.in, html body .band > div.out, html body .band > div.aside{position:relative; isolation:isolate; padding:12px 14px; border-radius:18px; background:none;}
+/* on a phone: the three figures share one row, what's left over gets the full width under them */
+@media (max-width:640px){
+  html body .band{grid-template-columns:repeat(3, minmax(0,1fr));}
+  html body .band > div{padding:10px 10px 10px 12px;}
+  html body .band .lbl{font-size:.78rem; line-height:1.25;}
+  html body .band .num{font-size:1.3rem;}
+  html body .band .net{grid-column:1 / -1;}
+  html body .band .net .num{font-size:1.7rem;}
+}
+/* each figure's colour washes in from the left edge and fades out a third of the way across */
+html body .band > div::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--wash, transparent) 34%, transparent) 0%,
+    color-mix(in srgb, var(--wash, transparent) 13%, transparent) 16%, transparent 38%);}
+html body .band .in{--wash:var(--g-green);}
+html body .band .out{--wash:var(--g-orange);}
+html body .band .aside{--wash:var(--g-tan);}
+html body .band .net{--wash:transparent;}
+html body .meter{background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(74,59,44,.12);}
+html body .meter span{background:color-mix(in srgb, var(--g-orange) 85%, transparent);}
+
+/* ---------- tabs float at the bottom, in reach of a thumb (like creatrr) ---------- */
+html body .tabs{position:fixed; z-index:25; left:0; right:0; margin:0 auto; flex-wrap:nowrap;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  width:min(520px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  padding:5px; gap:2px; border-radius:999px;
+  background-color:color-mix(in srgb, var(--sheet) 55%, transparent);
+  -webkit-backdrop-filter:blur(16px) saturate(1.7); backdrop-filter:blur(16px) saturate(1.7);
+  box-shadow:0 14px 40px rgba(74,59,44,.28), 0 2px 8px rgba(74,59,44,.14), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring),
+    inset 1.5px 0 1px -1px var(--g-edge), inset -1.5px 0 1px -1px var(--g-edge);
+  transition:opacity .2s ease, transform .2s ease;}
+/* symbols, not words: each tab is an icon, and only the open one also shows its name,
+   so the bar stays calm but you always know where you are */
+html body .tabs .tab{display:inline-flex; align-items:center; justify-content:center; gap:0;
+  flex:1 1 0; min-width:0; min-height:46px; padding:12px 6px; margin:0;
+  border:0; border-radius:999px; background:transparent; color:var(--ink-soft);
+  font-family:var(--body); font-weight:700; font-size:.9rem;
+  transition:flex-grow .3s ease, background-color .25s ease, color .25s ease, box-shadow .25s ease;}
+html body .tabs .tab:hover{background:transparent;}
+html body .tabs .tab[aria-selected="true"],
+html body .tabs .tab[aria-selected="true"]:hover{flex-grow:2.1; gap:7px; padding:12px 12px; color:var(--ink);
+  background-color:color-mix(in srgb, var(--tab-tint, var(--g-green)) 30%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--tab-tint, var(--g-green)) 55%, transparent), 0 4px 14px rgba(74,59,44,.12);}
+html body .tabs .tab[data-tab="expenses"], html body .tabs .tab[data-tab="bills"]{--tab-tint:var(--g-orange);}
+html body .tabs .tab[data-tab="insights"]{--tab-tint:var(--g-tan);}
+html body .tabs .tab-ic{display:inline-flex; line-height:0;}
+html body .tabs .tab-ic svg{display:block; width:21px; height:21px;}
+html body .tabs .tab-lbl{max-width:0; overflow:hidden; opacity:0; white-space:nowrap;
+  transition:max-width .3s ease, opacity .2s ease;}
+html body .tabs .tab[aria-selected="true"] .tab-lbl{max-width:7em; opacity:1;}
+/* room at the bottom of every page so nothing hides behind the bar */
+html body .wrap{padding-bottom:calc(env(safe-area-inset-bottom) + 110px);}
+/* out of the way while typing (the keyboard would push it over the field) */
+html:has(input:not([type="checkbox"]):not([type="file"]):focus, textarea:focus, select:focus) body .tabs{
+  opacity:0; transform:translateY(12px); pointer-events:none;}
+/* the little "saved" message sits above the bar */
+html body .toast{bottom:calc(env(safe-area-inset-bottom) + 84px); color:var(--ink); width:max-content; max-width:calc(100vw - 40px); text-align:center;
+  background-color:color-mix(in srgb, var(--sheet) 72%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(1.6); backdrop-filter:blur(24px) saturate(1.6);
+  box-shadow:0 14px 40px rgba(74,59,44,.25), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+
+/* ---------- one surface: no panels, no boxed cards ---------- */
+html body .panel{background:none; border:0; border-radius:0; padding:0;}
+html body .card{background:none; border:0; border-radius:0; padding:18px 0 0; border-top:1px solid var(--g-hair);}
+html body .card + .card{margin-top:22px;}
+html body .grid-2, html body .grid-3{gap:22px 26px;}
+html body .grid-2 > .card, html body .grid-3 > .card{margin-top:0;}
+html body .stack{gap:22px;}
+html body .panel-intro{margin-bottom:14px;}
+/* the quick "log it" forms: open on the surface, a hairline underneath */
+html body .quick{background:none; border-radius:0; padding:2px 0 20px; margin-bottom:20px; border-bottom:1px solid var(--g-hair);}
+html body .quick + .card, html body .quick + .grid-2 > .card:first-child{border-top:0; padding-top:0;}
+html body .empty-note{background:none; border-radius:0; padding:14px 6px;}
+
+/* a person's colour (or a figure's) washes in from the left edge and fades out,
+   instead of a hard stripe across the top */
+html body .card.person{position:relative; isolation:isolate; border-top:1px solid var(--g-hair); padding:16px 14px 6px;}
+html body .card.person::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:18px;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 11%, transparent) 16%, transparent 38%);}
+html body .card.stat{position:relative; isolation:isolate; border-top:0; padding:14px 16px; border-radius:18px;}
+html body .card.stat::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--wash, var(--g-tan)) 30%, transparent) 0%,
+    color-mix(in srgb, var(--wash, var(--g-tan)) 11%, transparent) 16%, transparent 38%);}
+html body .card.stat.in{--wash:var(--g-green); background:none;}
+html body .card.stat.out{--wash:var(--g-orange); background:none;}
+
+/* goals: open rows; tapping one shows a soft glass press */
+html body .card.goal{border-radius:0; padding:18px 4px 6px;}
+html body .card.goal:hover{border-color:var(--g-hair); background:none;}
+html body .card.goal:active{background-color:var(--g-fill); border-radius:18px;}
+
+/* charts keep their room, on the bare surface */
+html body .gap-card{padding:18px 0 8px;}
+
+/* lists + tables: solid hairlines instead of dashes */
+html body ul.list li{border-bottom:1px solid var(--g-hair);}
+html body ul.list li:last-child{border-bottom:0;}
+html body th{border-bottom:1px solid var(--g-hair);}
+html body td{border-bottom:1px solid var(--g-hair);}
+html body tr:last-child td{border-bottom:0;}
+html body .tx{border-bottom:1px solid var(--g-hair);}
+html body .tx-row:hover{background:var(--g-fill);}
+html body .divider{border-top:1px solid var(--g-hair);}
+
+/* little tags: soft glass chips */
+html body .chip{background-color:var(--g-fill); box-shadow:inset 0 0 0 1px var(--g-ring);}
+html body .chip.green{background-color:color-mix(in srgb, var(--g-green) 22%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--g-green) 45%, transparent);}
+html body .chip.orange{background-color:color-mix(in srgb, var(--g-orange) 22%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--g-orange) 45%, transparent);}
+
+/* progress bars: a glass channel */
+html body .bar-track, html body .progress{background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(74,59,44,.12);}
+
+/* ---------- fields: soft glass wells, no boxes ---------- */
+html body input, html body select, html body textarea{border:1px solid transparent; border-radius:14px;
+  background-color:rgba(255,255,255,.55); box-shadow:inset 0 0 0 1px var(--g-ring);}
+html body input:focus, html body select:focus, html body textarea:focus{outline:none;
+  border-color:color-mix(in srgb, var(--green-deep) 60%, transparent);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--g-green) 30%, transparent);}
+html body input[type="checkbox"], html body input[type="checkbox"]:focus{box-shadow:none; accent-color:var(--green-deep);}
+
+/* ---------- sheets: frosted glass over the page instead of a solid panel ---------- */
+html body dialog{border:0; background-color:color-mix(in srgb, var(--sheet) 86%, transparent);
+  -webkit-backdrop-filter:blur(30px) saturate(1.6); backdrop-filter:blur(30px) saturate(1.6);}
+html body dialog::backdrop{background:rgba(74,59,44,.18);}
+html body .dlg-head{background:color-mix(in srgb, var(--sheet) 70%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(1.6); backdrop-filter:blur(24px) saturate(1.6);}
+html body .dlg-actions{background:color-mix(in srgb, var(--sheet) 70%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(1.6); backdrop-filter:blur(24px) saturate(1.6);
+  border-top:1px solid var(--g-hair);}

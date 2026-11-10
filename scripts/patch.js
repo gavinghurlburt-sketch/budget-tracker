@@ -79,3 +79,24 @@ const css = `<style>
 </head>`;
 s = s.replace('</head>', css);
 fs.writeFileSync(p, s);
+
+// 5. glass redesign (scripts/native-glass.css): one continuous surface, frosted glass
+//    buttons, a floating icon tab bar at the bottom and three slowly drifting glow orbs.
+const glass = fs.readFileSync(path.join(__dirname, 'native-glass.css'), 'utf8');
+s = s.replace('</head>', `<style>${glass}</style>\n</head>`);
+s = s.replace(/<body>/, '<body>\n<div id="glowOrbs" aria-hidden="true"><i></i><i></i><i></i></div>');
+// tabs: an icon each, plus a name that only shows on the open tab
+const ic = d => `<span class="tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}</svg></span>`;
+const TAB_ICONS = {
+  income: ['Income', ic('<rect x="3" y="6" width="18" height="12" rx="3"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5v5M17.5 9.5v5"/>')],
+  expenses: ['Expenses', ic('<path d="M3 4h2.2l2.3 11h10.4l2.1-8H6.4"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="16.5" cy="19.5" r="1.4"/>')],
+  bills: ['Bills', ic('<path d="M6 3h12v18l-2.4-1.6L13.2 21 12 20.2 10.8 21l-2.4-1.6L6 21z"/><path d="M9 8h6M9 12h6M9 16h3.5"/>')],
+  goals: ['Goals', ic('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>')],
+  insights: ['Charts', ic('<path d="M4 4v16h16"/><path d="M7.5 15l3.5-4 3 2.5 5-6.5"/>')]
+};
+s = s.replace(/<button class="tab" role="tab" data-tab="(\w+)">[^<]*<\/button>/g, (m, k) =>
+  TAB_ICONS[k] ? `<button class="tab" role="tab" data-tab="${k}" aria-label="${TAB_ICONS[k][0]}">${TAB_ICONS[k][1]}<span class="tab-lbl">${TAB_ICONS[k][0]}</span></button>` : m);
+// charts: gridlines and doughnut seams that read on the glass surface
+s = s.split("grid:{color:'#EFE3CF'}").join("grid:{color:'rgba(74,59,44,.10)'}");
+s = s.split("borderColor:'#fff', borderWidth:3").join("borderColor:'#F7EEDF', borderWidth:3");
+fs.writeFileSync(p, s);

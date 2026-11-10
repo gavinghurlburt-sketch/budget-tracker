@@ -66,3 +66,5 @@ npm install
 npm run sync        # builds www/ from index.html and syncs the iOS project
 npx cap open ios    # Xcode: pick your team under Signing, choose your iPhone, press Play
 ```
+
+The iPhone app's look lives in `scripts/native-glass.css` (one continuous surface, frosted glass buttons, a floating icon tab bar at the bottom, three slowly drifting glow orbs). `scripts/patch.js` adds it last, so it wins over the page's own styles; the web version on Vercel keeps its original look.
