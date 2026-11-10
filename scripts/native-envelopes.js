@@ -75,12 +75,12 @@ function envelopesBlock(ym, where){
   return `${nudge ? `<p class="env-nudge">${nudge}</p>` : ''}<div class="env-list">${S.envelopes.map(e => envRow(e, ym)).join('')}</div>`;
 }
 
-// ---- Home: envelopes sit between the buttons and the chart ----
+// ---- Home: envelopes sit at the top, above the buttons and the chart ----
 const renderHomeBase = renderHome;
 renderHome = function(){
   renderHomeBase();
   const acts = $('#panel-home .home-actions'); if(!acts) return;
-  acts.insertAdjacentHTML('afterend', `<section class="env-home"><div class="env-head"><h3>Envelopes</h3>${S.envelopes.length ? '<button type="button" class="linkish" data-action="add-envelope">+ New</button>' : ''}</div>${envelopesBlock(view.month, 'home')}</section>`);
+  acts.insertAdjacentHTML('beforebegin', `<section class="env-home"><div class="env-head"><h3>Envelopes</h3>${S.envelopes.length ? '<button type="button" class="linkish" data-action="add-envelope">+ New</button>' : ''}</div>${envelopesBlock(view.month, 'home')}</section>`);
 };
 // ---- Expenses page: the place to see and manage them, right under "Log something you spent" ----
 const renderExpensesBase = renderExpenses;

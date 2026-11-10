@@ -14,6 +14,9 @@ function drawWave(gapCanvas, sw, redraw){
       });
     }
 
+    const card = gapCanvas.closest('.gap-card'), vEl = card && card.querySelector('.wave-verdict');
+    if(vEl){ const v = waveVerdict(view.month); vEl.className = 'wave-verdict ' + (v ? v.tone : ''); vEl.innerHTML = v ? `<b>${v.head}</b><span>${v.sub}</span>` : ''; vEl.hidden = !v; }
+
     // ---- buckets: days, weeks (Sunday to Saturday) or months, each a [from, to] date range ----
     const DAY = 864e5, MO = 30.44;
     const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -41,12 +44,7 @@ function drawWave(gapCanvas, sw, redraw){
 
     // what really happened up to now; past now is the forecast, scaled to the bucket size
     const pInc = projectedIncome() * per, pExp = projectedSpending() * per;
-    const asideAvg = (() => { const past = [1,2,3].map(k => monthSetAside(addMonths(CUR, -k))); return sum(past) / 3 * per; })();
     const incA = B.map((b,i) => i <= ci ? incOf(b) : null), outA = B.map((b,i) => i <= ci ? outOf(b) : null), asideA = B.map((b,i) => i <= ci ? asideOf(b) : null);
-    // a week or month that's only partway done shows the expected total (or more, if it's already past that);
-    // a single day shows what really happened. The tooltip always gives the real so-far numbers.
-    const wave = (A, exp) => B.map((b,i) => i < ci ? A[i] : i === ci ? (range === '30d' ? A[i] : Math.max(A[i], exp)) : exp);
-    const incW = wave(incA, pInc), outW = wave(outA, pExp), asideW = wave(asideA, asideAvg);
 
     // labels along the top: every day/week/month gets a gridline, only some get a name so they never crowd
     const every = range === '30d' ? 3 : range === '3m' ? 2 : 1;
@@ -62,28 +60,39 @@ function drawWave(gapCanvas, sw, redraw){
     const nowWord = range === '30d' ? 'today' : range === '3m' ? 'this week' : 'this month';
     const tension = range === '30d' ? .35 : .42;
 
-    const LAYERS = [
-      { label:'Came in', data:incW, actual:incA, rgb:'116,209,126', line:'#8FE39A', a:.38 },
-      { label:'Went out', data:outW, actual:outA, rgb:'242,154,142', line:'#F6B0A6', a:.46 },
-      { label:'Set aside', data:asideW, actual:asideA, rgb:'140,194,242', line:'#A9D3F6', a:.6 }
-    ];
-    // a vertical glow that starts at each wave's own crest, so every wave is brightest at its peak
-    const waveFill = (rgb, a) => ctx => {
-      const area = ctx.chart.chartArea, y = ctx.chart.scales.y; if(!area || !y) return `rgba(${rgb},${a * .4})`;
-      const crest = Math.min(area.bottom - 1, y.getPixelForValue(Math.max(0, ...ctx.dataset.data.filter(v => v != null))));
-      const g = ctx.chart.ctx.createLinearGradient(0, crest, 0, area.bottom);
-      g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(.45, `rgba(${rgb},${a * .3})`); g.addColorStop(.85, `rgba(${rgb},0)`);
-      return g;
-    };
-    const datasets = [];
-    LAYERS.forEach(L => {
-      // two faint echoes under each wave give the layered, ribbon-like depth
-      [[.84, .12], [.68, .09]].forEach(([k, a]) => datasets.push({ label:L.label, echo:true, data:L.data.map(v => v * k),
-        borderColor:`rgba(${L.rgb},.22)`, borderWidth:1, backgroundColor:waveFill(L.rgb, a), fill:'origin', pointRadius:0, pointHoverRadius:0 }));
-      datasets.push({ label:L.label, actual:L.actual, data:L.data, glow:`rgba(${L.rgb},.75)`, borderColor:L.line, borderWidth:2, backgroundColor:waveFill(L.rgb, L.a), fill:'origin',
-        pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor:L.line, pointHoverBorderColor:'#0F1512', pointHoverBorderWidth:2,
-        segment:{ borderDash: s => s.p0DataIndex >= ci ? [5,5] : undefined } });
+    // ---- one "left over" wave: at each point, what's left over so far that month (came in minus went out).
+    //      It starts again at $0 each month, so the bright line always matches the verdict above the chart.
+    //      Above the zero line (green) money is left over; below it (coral) more went out than came in. ----
+    const tIso = todayStr(), dayNet = (projectedIncome() - projectedSpending()) / MO;
+    const mtd = d => { const m = ymOf(d);
+      return sum(S.income.filter(e => ymOf(e.date) === m && e.date <= d).map(e => e.amount)) - sum(S.expenses.filter(e => ymOf(e.date) === m && e.date <= d).map(e => e.amount)); };
+    const ahead = d => { const day = +d.slice(8, 10);   // a future point: today's real number plus usual days, or usual days from the 1st
+      return ymOf(d) === ymOf(tIso) ? mtd(tIso) + (day - +tIso.slice(8, 10)) * dayNet : day * dayNet; };
+    const run = B.map((b,i) => {
+      // a whole month: this month's point is where it's headed (real so far plus usual days to the end)
+      if(range === '1y') return i < ci ? mtd(b.ym + '-31') : i === ci ? ahead(b.ym + '-' + pad(daysIn(b.ym))) : pInc - pExp;
+      const d = i <= ci ? (b.to < tIso ? b.to : tIso) : b.to;
+      return i <= ci ? mtd(d) : ahead(d);
     });
+    const GREEN = '116,209,126', CORAL = '242,154,142';
+    const zeroFrac = chart => { const a = chart.chartArea, y = chart.scales.y; if(!a || !y) return null;
+      return Math.min(1, Math.max(0, (y.getPixelForValue(0) - a.top) / (a.bottom - a.top))); };
+    // green above zero and coral below, with a hard switch right at the zero line
+    const signLine = ctx => { const ch = ctx.chart, a = ch.chartArea, f = zeroFrac(ch); if(f == null) return '#8FE39A';
+      const g = ch.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+      g.addColorStop(0, '#8FE39A'); g.addColorStop(f, '#8FE39A'); g.addColorStop(f, '#F6B0A6'); g.addColorStop(1, '#F6B0A6'); return g; };
+    const signFill = (k = 1) => ctx => { const ch = ctx.chart, a = ch.chartArea, f = zeroFrac(ch); if(f == null) return `rgba(${GREEN},${.2 * k})`;
+      const g = ch.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+      g.addColorStop(0, `rgba(${GREEN},${.5 * k})`); g.addColorStop(f, `rgba(${GREEN},${.04 * k})`);
+      g.addColorStop(f, `rgba(${CORAL},${.04 * k})`); g.addColorStop(1, `rgba(${CORAL},${.55 * k})`); return g; };
+    // two faint echoes under the wave give it the layered, ribbon-like depth
+    const datasets = [[.8, .3], [.6, .22]].map(([k, a]) => ({ label:'echo', echo:true, data:run.map(v => v * k), borderWidth:1, borderColor:'rgba(234,242,236,.10)',
+      backgroundColor:signFill(a), fill:'origin', pointRadius:0, pointHoverRadius:0 }));
+    datasets.push({ label:'Left over', data:run, borderColor:signLine, borderWidth:2.5, backgroundColor:signFill(.75), fill:'origin',
+      glow: run[ci] >= 0 ? `rgba(${GREEN},.7)` : `rgba(${CORAL},.7)`,
+      pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor: c => c.raw >= 0 ? '#8FE39A' : '#F6B0A6', pointHoverBorderColor:'#0F1512', pointHoverBorderWidth:2,
+      segment:{ borderDash: s => s.p0DataIndex >= ci ? [5,5] : undefined } });
+    const mono = 'ui-monospace, "SF Mono", Menlo, monospace';
     const STARS = Array.from({length:34}, (_, i) => [((i * 73) % 97) / 97, ((i * 41 + 17) % 89) / 89, (i % 5 === 0) ? 1.3 : .8]);
     const waveLook = {
       id:'waveLook',
@@ -99,38 +108,71 @@ function drawWave(gapCanvas, sw, redraw){
         const {ctx, chartArea:a, scales:{x}} = chart; const nx = x.getPixelForValue(ci); ctx.save();
         // the forecast side sits a little dimmer than what really happened
         ctx.fillStyle = 'rgba(15,21,18,.38)'; ctx.fillRect(nx, a.top, a.right - nx, a.bottom - a.top);
+        // the zero line: above it you kept money, below it more went out than came in
+        const zy = chart.scales.y.getPixelForValue(0);
+        ctx.setLineDash([3,4]); ctx.strokeStyle = 'rgba(234,242,236,.4)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(a.left, zy); ctx.lineTo(a.right, zy); ctx.stroke(); ctx.setLineDash([]);
+        ctx.font = '10px ' + mono; ctx.fillStyle = 'rgba(234,242,236,.55)'; ctx.textAlign = 'right'; ctx.fillText('$0', a.right - 4, zy - 5);
         // the bright "now" line, with a ringed dot at its top
         ctx.shadowColor = 'rgba(234,242,236,.8)'; ctx.shadowBlur = 8; ctx.strokeStyle = '#EAF2EC'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(nx, a.top + 2); ctx.lineTo(nx, a.bottom); ctx.stroke();
-        ctx.shadowBlur = 0; ctx.fillStyle = '#8FE39A'; ctx.beginPath(); ctx.arc(nx, a.top + 6, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.fillStyle = run[ci] >= 0 ? '#8FE39A' : '#F6B0A6'; ctx.beginPath(); ctx.arc(nx, a.top + 6, 4, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#EAF2EC'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(nx, a.top + 6, 7, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
     };
-    const mono = 'ui-monospace, "SF Mono", Menlo, monospace';
     charts.push(new Chart(gapCanvas, {
       type:'line', data:{ labels, datasets }, plugins:[waveLook],
       options:{ maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
         elements:{ line:{ tension, cubicInterpolationMode:'monotone' } },
         layout:{ padding:{ top:4, left:0, right:0, bottom:0 } },
         plugins:{ legend:{display:false},
-          tooltip:{ backgroundColor:'rgba(26,36,31,.92)', borderColor:'rgba(255,255,255,.14)', borderWidth:1, padding:10, cornerRadius:12, titleColor:'#EAF2EC', bodyColor:'#EAF2EC', usePointStyle:true, boxPadding:4,
-            filter: it => !it.dataset.echo,
+          tooltip:{ filter: it => !it.dataset.echo, backgroundColor:'rgba(26,36,31,.92)', borderColor:'rgba(255,255,255,.14)', borderWidth:1, padding:10, cornerRadius:12, titleColor:'#EAF2EC', bodyColor:'#EAF2EC', displayColors:false,
             callbacks:{ title: items => { const i = items[0].dataIndex; return bucketName(B[i]) + (i > ci ? ' (forecast)' : ''); },
-              label: c => c.dataIndex === ci ? `${c.dataset.label}: ${money0(c.dataset.actual[ci])} so far` : `${c.dataset.label}: ${money0(c.parsed.y)}`,
-              labelColor: c => ({ borderColor:c.dataset.borderColor, backgroundColor:c.dataset.borderColor }),
-              footer: items => { const i = items.find(t => t.dataset.label === 'Came in'), o = items.find(t => t.dataset.label === 'Went out'); if(!i || !o) return '';
-                const k = i.dataIndex, g = k === ci ? i.dataset.actual[ci] - o.dataset.actual[ci] : i.parsed.y - o.parsed.y;
-                if(k === ci && range !== '30d') return `Expected ${nowWord}: ${money0(pInc)} in, ${money0(pExp)} out`;
-                if(k > ci && range === '30d') return 'An average day';
-                return (g >= 0 ? 'Left over: ' : 'Short by: ') + money0(Math.abs(g)); } } } },
+              label: c => { const i = c.dataIndex, k = run[i], when = range === '1y' ? (i === ci ? ' so far' : i > ci ? ', expected' : '') : i > ci ? ' by then, expected' : ' by then';
+                if(range === '1y' && i === ci){ const so = mtd(tIso);
+                  return [`${so >= 0 ? 'Left over' : 'Short'} so far: ${money0(Math.abs(so))}`, `Headed for about ${k < 0 ? '-' : ''}${money0(Math.abs(k))} by month's end`, `${money0(incA[i])} came in, ${money0(outA[i])} went out`]; }
+                const kept = `${k >= 0 ? 'Left over' : 'Short'}${when}: ${money0(Math.abs(k))}`;
+                if(i > ci) return [kept];
+                const span = range === '1y' ? '' : range === '3m' ? 'This week: ' : 'This day: ';
+                const lines = [kept, `${span}${money0(incA[i])} came in, ${money0(outA[i])} went out`];
+                if(asideA[i] > 0) lines.push(`Set aside ${money0(asideA[i])}`); return lines; } } } },
         scales:{
-          // headroom above the tallest crest, so the waves sit low with sky above them
-          y:{ display:false, beginAtZero:true, max: Math.max(1, ...incW, ...outW, ...asideW) * 1.3 },
+                y:{ display:false, ...(() => { const hi = Math.max(0, ...run), lo = Math.min(0, ...run), span = (hi - lo) || 1;
+            return { max: hi + span * .28, min: lo - span * .14 }; })() },
           x:{ position:'top', offset:false, border:{display:false},
             grid:{ color: c => c.index === ci ? 'rgba(0,0,0,0)' : named(c.index) ? 'rgba(234,242,236,.08)' : 'rgba(234,242,236,.03)', drawTicks:false },
             ticks:{ padding:10, autoSkip:false, maxRotation:0, font: c => ({ family:mono, size:10, weight: c.index === ci ? '700' : '400' }),
               color: c => c.index === ci ? '#EAF2EC' : 'rgba(161,178,166,.75)' } } } }
     }));
   }
+}
+
+// ---- the verdict above the chart: is this month going well? ----
+// It compares money left over so far this month with where you usually are by this day of the month
+// (from the last three months, so a rent day or a payday early in the month doesn't throw it off).
+function waveVerdict(ym){
+  const left = monthIncome(ym) - monthExpenses(ym), mName = monthName(ym);
+  if(ym > CUR) return null;
+  if(ym < CUR){
+    if(!monthIncome(ym) && !monthExpenses(ym)) return null;
+    return left >= 0 ? { tone:'good', head:`${mName} ended ahead`, sub:`You kept ${money0(left)} that month.` }
+                     : { tone:'bad', head:`${mName} ended short`, sub:`${money0(-left)} more went out than came in.` };
+  }
+  const day = new Date().getDate(), dayName = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  if(!monthIncome(ym) && !monthExpenses(ym)) return { tone:'', head:'Nothing logged yet this month', sub:'Log what comes in and goes out and this shows how it\'s going.' };
+  const past = [1,2,3].map(k => addMonths(ym, -k)).filter(m => monthIncome(m) || monthExpenses(m));
+  let usual;
+  if(past.length){
+    usual = sum(past.map(m => { const cut = `${m}-${pad(Math.min(day, daysIn(m)))}`;
+      return sum(S.income.filter(e => ymOf(e.date) === m && e.date <= cut).map(e => e.amount)) - sum(S.expenses.filter(e => ymOf(e.date) === m && e.date <= cut).map(e => e.amount)); })) / past.length;
+  } else usual = (projectedIncome() - projectedSpending()) * day / daysIn(ym);
+  const diff = left - usual, slack = Math.max(50, Math.abs(projectedIncome() - projectedSpending()) * .1);
+  const usualTxt = `By ${dayName} you're usually ${usual >= 0 ? 'about ' + money0(usual) + ' ahead' : 'out about ' + money0(-usual)}.`;
+  if(diff >= -slack){
+    const where = diff > slack ? `${money0(diff)} better than usual by ${dayName}.` : `about where you usually are by ${dayName}.`;
+    return { tone:'good', head:'On track', sub: left >= 0 ? `${money0(left)} left over so far, ${where}` : `Out ${money0(-left)} so far, ${where}` };
+  }
+  if(left < 0) return { tone:'bad', head:'Spending more than came in', sub:`Out by ${money0(-left)} so far in ${mName}. ${usualTxt}` };
+  return { tone:'warn', head:'A bit behind a usual month', sub:`${money0(left)} left over so far. ${usualTxt}` };
 }

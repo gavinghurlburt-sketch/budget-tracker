@@ -19,9 +19,9 @@ function renderHome(){
       <button type="button" class="home-act aside" data-action="home-add-to-goal">${HOME_IC.goal}<span>Add to a goal</span></button>
     </div>
     <div class="card gap-card home-chart">
-      <div class="gap-head"><h3>Income vs. spending</h3>${hasData ? rangeSwitch('home-range') : ''}</div>
-      ${hasData ? `<div class="chart-box"><canvas id="ch-home" aria-label="Wave chart of money that came in, went out and was set aside"></canvas></div>
-      <div class="gap-key"><span><i class="k-in"></i>Came in</span><span><i class="k-out"></i>Went out</span><span><i class="k-aside"></i>Set aside</span><span class="k-note">Past the bright line is the forecast</span></div>`
+      <div class="gap-head"><h3>Income vs. spending</h3><p class="wave-verdict" hidden></p>${hasData ? rangeSwitch('home-range') : ''}</div>
+      ${hasData ? `<div class="chart-box"><canvas id="ch-home" aria-label="Wave chart of money left over: income minus spending, as a running total"></canvas></div>
+      <div class="gap-key"><span><i class="k-in"></i>Above $0: money left over</span><span><i class="k-out"></i>Below $0: spent more than came in</span><span class="k-note">Each point is what's left over so far that month. Past the bright line is the forecast.</span></div>`
       : `<div class="empty-note" style="margin-top:10px">Log some income and spending and your waves show up here.</div>`}
     </div>`;
   if(view.tab === 'home') requestAnimationFrame(drawHomeChart);
