@@ -44,13 +44,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 
-// Capacitor turns off the elastic edge bounce; turn it back on and match the page background.
+// Capacitor turns off the elastic edge bounce; turn it back on and match the (dark) page background.
 class ViewController: CAPBridgeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         webView?.scrollView.bounces = true
         webView?.scrollView.alwaysBounceVertical = true
-        let bg = UIColor(red: 0xEF/255.0, green: 0xE3/255.0, blue: 0xCF/255.0, alpha: 1)
+        let bg = UIColor(red: 0x0F/255.0, green: 0x15/255.0, blue: 0x12/255.0, alpha: 1) // dark page colour, so a pull-down shows no light band
         view.backgroundColor = bg
         webView?.isOpaque = false
         webView?.backgroundColor = bg

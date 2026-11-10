@@ -70,9 +70,15 @@ html body{background:transparent;}
   100%{transform:translate3d(10vw,-20vh,0) scale(1.04);}
 }
 @media (prefers-reduced-motion: reduce){ #glowOrbs i{animation:none !important;} }
-/* the status-bar strip is frosted, not a solid band */
-html body::before{background:color-mix(in srgb, var(--surface) 62%, transparent);
-  -webkit-backdrop-filter:blur(20px) saturate(1.6); backdrop-filter:blur(20px) saturate(1.6);}
+/* behind the status bar: no band and no edge. A soft fade of the page colour keeps the clock readable
+   over content scrolling underneath, and melts into the page below it. */
+html body::before{height:calc(env(safe-area-inset-top) + 30px);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  background:linear-gradient(to bottom, color-mix(in srgb, var(--surface) 92%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 78%, transparent) 50%, color-mix(in srgb, var(--surface) 30%, transparent) 100%);
+  /* the mask fades the blur and the tint out together, so there is no line where the layer stops */
+  -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
+  mask-image:linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);}
 
 /* ---------- buttons: all glass pills ---------- */
 html body .btn{border:0; border-radius:999px; color:var(--ink); font-weight:800; padding:0 18px;
