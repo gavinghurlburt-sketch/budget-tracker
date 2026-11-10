@@ -21,6 +21,7 @@ if(typeof Chart !== 'undefined'){
     id:'glassCharts',
     beforeInit(chart){
       const type = chart.config.type, isArc = type === 'doughnut' || type === 'pie';
+      const sc = chart.config.options && chart.config.options.scales, stacked = type === 'bar' && !!(sc && sc.x && sc.x.stacked);
       if(type !== 'bar' && !isArc) return;
       chart.data.datasets.forEach(ds => {
         if(ds.glassDone) return;
@@ -34,6 +35,14 @@ if(typeof Chart !== 'undefined'){
         ds.hoverBackgroundColor = pick(isArc ? arcFill : barFill);
         ds.borderColor = pickRim(rim); ds.hoverBorderColor = pickRim(rgb => `rgba(${rgb},1)`);
         if(isArc){ ds.borderWidth = 1.5; ds.spacing = 3; ds.borderRadius = 8; ds.hoverOffset = 6; }
+        else if(stacked){
+          // stacked bars read as one glass column: only the top piece is rounded, and the pieces below it
+          // drop their top edge so each join is a single thin line
+          const isTop = ctx => !chart.data.datasets.some((d, j) => j > ctx.datasetIndex && !d.hidden && (+d.data[ctx.dataIndex] || 0) > 0);
+          ds.borderWidth = 1.5; ds.maxBarThickness = 56; ds.categoryPercentage = .62; ds.barPercentage = 1;
+          ds.borderRadius = ctx => isTop(ctx) ? { topLeft:12, topRight:12, bottomLeft:0, bottomRight:0 } : 0;
+          ds.borderSkipped = ctx => isTop(ctx) ? 'start' : 'end';
+        }
         else { ds.borderWidth = 1.5; ds.borderRadius = 10; ds.borderSkipped = false; ds.maxBarThickness = 46; }
         ds.glassDone = true;
       });
@@ -44,6 +53,19 @@ if(typeof Chart !== 'undefined'){
     // a soft coloured glow around each bar series, so the glass catches the light like the buttons do
     beforeDatasetDraw(chart, args){ const ds = chart.data.datasets[args.index]; if(!ds.glassRgb) return;
       const c = chart.ctx; c.save(); c.shadowColor = `rgba(${ds.glassRgb[0]},.35)`; c.shadowBlur = chart.config.type === 'bar' ? 14 : 18; },
-    afterDatasetDraw(chart, args){ if(chart.data.datasets[args.index].glassRgb) chart.ctx.restore(); }
+    afterDatasetDraw(chart, args){ if(chart.data.datasets[args.index].glassRgb) chart.ctx.restore(); },
+    // each column's total sits just above it, so the size is readable without the axis
+    afterDatasetsDraw(chart){
+      if(!(chart.config.options && chart.config.options.glassTotals)) return;
+      const c = chart.ctx, fmt = typeof money0 === 'function' ? money0 : v => '$' + Math.round(v).toLocaleString();
+      chart.data.labels.forEach((l, i) => {
+        let total = 0, topY = null, x = null;
+        chart.data.datasets.forEach((d, j) => { const m = chart.getDatasetMeta(j); if(!chart.isDatasetVisible(j)) return;
+          const v = +d.data[i] || 0; if(v <= 0 || !m.data[i]) return; total += v; x = m.data[i].x; topY = topY === null ? m.data[i].y : Math.min(topY, m.data[i].y); });
+        if(!total) return;
+        c.save(); c.font = `700 12px ${getComputedStyle(document.body).fontFamily}`; c.fillStyle = 'rgba(236,244,238,.9)';
+        c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillText(fmt(total), x, topY - 6); c.restore();
+      });
+    }
   });
 }

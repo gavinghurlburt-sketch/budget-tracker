@@ -119,6 +119,14 @@ swaps.forEach(([a, b]) => { s = s.split(a).join(b); });
 // charts: gridlines and doughnut seams that read on the glass surface
 s = s.split("grid:{color:'#EFE3CF'}").join("grid:{color:'rgba(255,255,255,.08)'}");
 s = s.split("borderColor:'#fff', borderWidth:3").join("borderColor:'#0F1512', borderWidth:3");
+// Income by kind of work: kinds with $0 are left off, the axis is fainter, and there's room on top for each column's total
+{
+  const a = "data:{ labels:keys.map(k => TYPES[k]), datasets },";
+  const b = "scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, grid:{color:'rgba(255,255,255,.08)'}, ticks:{callback: v => money0(v)}} } } }));";
+  if(!s.includes(a) || !s.includes(b)) throw new Error('patch.js: income-by-kind chart not found');
+  s = s.replace(a, "data:(keep => ({ labels:keys.filter((k, i) => keep[i]).map(k => TYPES[k]), datasets:datasets.map(d => Object.assign(d, { data:d.data.filter((v, i) => keep[i]) })) }))(keys.map((k, i) => datasets.some(d => d.data[i] > 0))),");
+  s = s.replace(b, "layout:{padding:{top:26}}, scales:{ x:{stacked:true, grid:{display:false}, border:{display:false}}, y:{stacked:true, beginAtZero:true, border:{display:false}, grid:{color:'rgba(255,255,255,.05)'}, ticks:{maxTicksLimit:5, color:'rgba(161,178,166,.5)', font:{size:11}, callback: v => money0(v)}} }, glassTotals:true } }));");
+}
 fs.writeFileSync(p, s);
 
 // 6. iPhone build only: the Income vs. spending chart becomes layered glowing waves
