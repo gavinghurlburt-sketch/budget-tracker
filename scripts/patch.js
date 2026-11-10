@@ -114,3 +114,17 @@ swaps.forEach(([a, b]) => { s = s.split(a).join(b); });
 s = s.split("grid:{color:'#EFE3CF'}").join("grid:{color:'rgba(255,255,255,.08)'}");
 s = s.split("borderColor:'#fff', borderWidth:3").join("borderColor:'#0F1512', borderWidth:3");
 fs.writeFileSync(p, s);
+
+// 6. iPhone build only: the Income vs. spending chart becomes layered glowing waves
+//    (green came in, coral went out, blue set aside) with a bright line on this month.
+{
+  let h = fs.readFileSync(p, 'utf8');
+  const start = h.indexOf('  // gap chart\n'), end = h.indexOf('  // by person\n');
+  if(start < 0 || end < start) throw new Error('patch.js: gap chart block not found');
+  h = h.slice(0, start) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + h.slice(end);
+  const key = /<div class="gap-key">[\s\S]*?<\/div>/;
+  if(!key.test(h)) throw new Error('patch.js: gap chart key not found');
+  h = h.replace(key, '<div class="gap-key"><span><i class="k-in"></i>Came in</span><span><i class="k-out"></i>Went out</span><span><i class="k-aside"></i>Set aside</span><span class="k-note">Past the bright line is the forecast</span></div>');
+  h = h.replace('aria-label="Line chart of income versus spending by month"', 'aria-label="Wave chart of money that came in, went out and was set aside, by month"');
+  fs.writeFileSync(p, h);
+}

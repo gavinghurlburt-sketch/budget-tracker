@@ -289,3 +289,11 @@ html body .card.stat{border-top:1px solid var(--g-hair); padding-top:16px;}
 html body .meter span{background:color-mix(in srgb, var(--out) 85%, transparent);}
 html body .progress.splurge span{background:var(--out);}
 html body .chip.orange{color:#EBCB72;}
+/* Income vs. spending as glowing waves: edge to edge, small mono key with glowing dots */
+html body .gap-card .chart-box{height:260px; margin:12px -4px 0;}
+html body .gap-key{gap:8px 16px; font-size:.82rem; margin-top:10px;}
+html body .gap-key i{width:9px; height:9px; border-radius:50%; vertical-align:0; margin-right:6px;}
+html body .gap-key .k-in{background:var(--in); box-shadow:0 0 8px var(--in);}
+html body .gap-key .k-out{background:var(--out); box-shadow:0 0 8px var(--out);}
+html body .gap-key .k-aside{background:var(--aside); box-shadow:0 0 8px var(--aside);}
+html body .gap-key .k-note{flex-basis:100%; color:var(--ink-soft); opacity:.8;}
