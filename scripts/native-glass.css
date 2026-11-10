@@ -482,3 +482,22 @@ html body .stats-back{display:inline-flex; align-items:center; gap:2px; padding:
   -webkit-backdrop-filter:blur(16px) saturate(1.7); backdrop-filter:blur(16px) saturate(1.7);
   box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
 html body .stats-back svg{width:18px; height:18px;}
+
+/* ---------- safe to spend today ---------- */
+html body .safe-spend{display:grid; justify-items:center; gap:2px; margin:12px auto 4px; padding:12px 22px 13px; max-width:100%;
+  border:0; border-radius:22px; font-family:var(--body); color:var(--ink); text-align:center; cursor:pointer;
+  background-color:color-mix(in srgb, var(--g-green) 16%, transparent);
+  -webkit-backdrop-filter:blur(12px) saturate(1.6); backdrop-filter:blur(12px) saturate(1.6);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 42%, transparent);}
+html body .safe-spend b{font-family:var(--head, inherit); font-size:1.9rem; font-weight:600; line-height:1.05; color:var(--in);}
+html body .safe-spend span{font-weight:700; font-size:.92rem;}
+html body .safe-spend small{font-size:.8rem; color:var(--ink-soft); line-height:1.35;}
+html body .safe-spend.short{background-color:color-mix(in srgb, var(--out) 14%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--out) 45%, transparent);}
+html body .safe-spend.short b{color:var(--out);}
+html body .safe-lead{margin:0; color:var(--ink-soft);}
+html body .safe-math{display:grid; gap:2px;}
+html body .safe-row{display:flex; justify-content:space-between; gap:12px; padding:9px 2px; border-bottom:1px solid rgba(255,255,255,.07);}
+html body .safe-row b{font-variant-numeric:tabular-nums;}
+html body .safe-row.in b{color:var(--in);} html body .safe-row.out b{color:var(--out);} html body .safe-row.aside b{color:var(--aside);}
+html body .safe-row.total{border-bottom:0; font-size:1.05rem;}
