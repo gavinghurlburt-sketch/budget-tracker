@@ -14,7 +14,8 @@ html:root{
   --tan:#3E8F80; --tan-soft:rgba(255,255,255,.06);
   --ink:#EAF2EC; --ink-soft:#A1B2A6;
   --green:#74D17E; --green-soft:rgba(116,209,126,.16); --green-deep:#8FE39A;
-  --orange:#E2BE5E; --orange-soft:rgba(226,190,94,.16); --orange-deep:#EBCB72;
+  --orange:#E2BE5E; --orange-soft:rgba(226,190,94,.16); --orange-deep:#F29A8E;
+  --in:#8FE39A; --out:#F29A8E; --aside:#8CC2F2;   /* came in / went out / set aside */
   --crit:#EE9A92;
   /* glass */
   --g-fill: rgba(255,255,255,.06);
@@ -274,3 +275,17 @@ html body .item-side .linkish{margin-top:6px;}
 html body select{-webkit-appearance:none; appearance:none; padding-right:44px;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A1B2A6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 16px center; background-size:16px 16px;}
+
+/* the top figures: just text, no tiles. Each value carries its own colour:
+   came in = green, went out = soft coral, set aside for goals = soft blue */
+html body .band > div::before, html body .card.stat::before{content:none; display:none;}
+html body .band > div, html body .band > div.in, html body .band > div.out, html body .band > div.aside,
+html body .card.stat{background:none; border-radius:0; padding-left:0; padding-right:8px;}
+html body .band .in .num, html body .card.stat.in .num{color:var(--in);}
+html body .band .out .num, html body .card.stat.out .num{color:var(--out);}
+html body .band .aside .num{color:var(--aside);}
+html body .card.stat{border-top:1px solid var(--g-hair); padding-top:16px;}
+/* spending is coral everywhere now (the bar under the figures, the chart), so it matches "went out" */
+html body .meter span{background:color-mix(in srgb, var(--out) 85%, transparent);}
+html body .progress.splurge span{background:var(--out);}
+html body .chip.orange{color:#EBCB72;}
