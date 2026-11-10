@@ -102,6 +102,15 @@ if(!s.includes("const view = { tab:'income'")) throw new Error('patch.js: view n
 s = s.replace("const view = { tab:'income'", "const view = { tab:'home'");
 s = s.replace(/<button class="tab" role="tab" data-tab="(\w+)">[^<]*<\/button>/g, (m, k) =>
   TAB_ICONS[k] ? `<button class="tab" role="tab" data-tab="${k}" aria-label="${TAB_ICONS[k][0]}">${TAB_ICONS[k][1]}<span class="tab-lbl">${TAB_ICONS[k][0]}</span></button>` : m);
+// Home sits in the middle of the bar: Income and Goals to its left, Bills and Expenses to its right
+{
+  const nav = s.match(/<nav class="tabs" role="tablist">([\s\S]*?)<\/nav>/);
+  if(!nav) throw new Error('patch.js: tab bar not found');
+  const btn = {}; nav[1].replace(/<button class="tab"[^>]*data-tab="(\w+)"[\s\S]*?<\/button>/g, (m, k) => { btn[k] = m; return m; });
+  const order = ['income', 'goals', 'home', 'bills', 'expenses', 'insights'];
+  if(order.some(k => !btn[k])) throw new Error('patch.js: a tab is missing');
+  s = s.replace(nav[0], '<nav class="tabs" role="tablist">\n    ' + order.map(k => btn[k]).join('\n    ') + '\n  </nav>');
+}
 // dark mode: chart colours + the theme colour. Green is income, a soft coral is spending.
 const swaps = [
   ['<meta name="theme-color" content="#EFE3CF">', '<meta name="theme-color" content="#0F1512">'],
