@@ -113,7 +113,7 @@ const swaps = [
   ['rgba(159,212,154,', 'rgba(116,209,126,'],
   ['rgba(246,178,107,', 'rgba(242,154,142,'],
   ["['#F6B26B','#9FD49A','#D9B98C','#F9CF9E','#7FBF7A','#E8955A','#C7DDB5','#B8946A','#FBE0BF','#A7C98F','#E5C9A3']",
-   "['#74D17E','#E2BE5E','#5FB3A1','#A9D9A0','#C9A84E','#3E8F80','#D6E7B8','#8FA89A','#F0D88E','#4E9A55','#B9C7BB']"]
+   "['#8FE39A','#F29A8E','#8CC2F2','#E2BE5E','#C3A6F2','#7FD8C8','#F2B880','#E39AC8','#A9D9A0','#9FB4F2','#B9C7BB']"]
 ];
 swaps.forEach(([a, b]) => { s = s.split(a).join(b); });
 // charts: gridlines and doughnut seams that read on the glass surface
@@ -131,7 +131,7 @@ fs.writeFileSync(p, s);
   // the wave chart and the Home tab go into the main script, just before the app starts
   const startAt = h.indexOf('/* ---------- start ---------- */');
   if(startAt < 0) throw new Error('patch.js: start marker not found');
-  h = h.slice(0, startAt) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-home.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-envelopes.js', 'utf8') + '\n' + h.slice(startAt);
+  h = h.slice(0, startAt) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-home.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-envelopes.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-glass-charts.js', 'utf8') + '\n' + h.slice(startAt);
   const key = /<div class="gap-key">[\s\S]*?<\/div>/;
   if(!key.test(h)) throw new Error('patch.js: gap chart key not found');
   h = h.replace(key, '<div class="gap-key"><span><i class="k-in"></i>Above $0: money left over</span><span><i class="k-out"></i>Below $0: spent more than came in</span><span class="k-note">Each point is what\'s left over so far that month. Past the bright line is the forecast.</span></div>');
