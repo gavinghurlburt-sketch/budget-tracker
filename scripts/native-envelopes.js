@@ -75,7 +75,7 @@ function envelopesBlock(ym, where){
   return `${nudge ? `<p class="env-nudge">${nudge}</p>` : ''}<div class="env-list">${S.envelopes.map(e => envRow(e, ym)).join('')}</div>`;
 }
 
-// ---- Home: envelopes sit at the top, above the buttons and the chart ----
+// ---- Home: envelopes sit between the chart and the buttons ----
 const renderHomeBase = renderHome;
 renderHome = function(){
   renderHomeBase();

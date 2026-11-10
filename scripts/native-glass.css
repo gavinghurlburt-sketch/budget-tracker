@@ -425,5 +425,6 @@ html body .wave-verdict span{font-size:.9rem; color:var(--ink-soft); max-width:3
 html body .wave-verdict.good b{color:var(--in); text-shadow:0 0 18px color-mix(in srgb, var(--in) 45%, transparent);}
 html body .wave-verdict.warn b{color:#E2BE5E; text-shadow:0 0 18px rgba(226,190,94,.4);}
 html body .wave-verdict.bad b{color:var(--out); text-shadow:0 0 18px color-mix(in srgb, var(--out) 45%, transparent);}
-html body .gap-head h3{font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);}
 html body .env-home + .home-actions{margin-top:0;}
+html body .home-chart{margin:0 0 26px;}
+html body .wave-verdict b{font-size:1.6rem;}
