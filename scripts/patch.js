@@ -88,12 +88,18 @@ s = s.replace(/<body>/, '<body>\n<div id="glowOrbs" aria-hidden="true"><i></i><i
 // tabs: an icon each, plus a name that only shows on the open tab
 const ic = d => `<span class="tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}</svg></span>`;
 const TAB_ICONS = {
+  home: ['Home', ic('<path d="M4 11.2 12 4.5l8 6.7"/><path d="M6.2 9.6V19.5h11.6V9.6"/><path d="M10 19.5v-5h4v5"/>')],
   income: ['Income', ic('<rect x="3" y="6" width="18" height="12" rx="3"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5v5M17.5 9.5v5"/>')],
   expenses: ['Expenses', ic('<path d="M3 4h2.2l2.3 11h10.4l2.1-8H6.4"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="16.5" cy="19.5" r="1.4"/>')],
   bills: ['Bills', ic('<path d="M6 3h12v18l-2.4-1.6L13.2 21 12 20.2 10.8 21l-2.4-1.6L6 21z"/><path d="M9 8h6M9 12h6M9 16h3.5"/>')],
   goals: ['Goals', ic('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>')],
   insights: ['Charts', ic('<path d="M4 4v16h16"/><path d="M7.5 15l3.5-4 3 2.5 5-6.5"/>')]
 };
+// a Home tab first, and the app opens on it
+s = s.replace('<button class="tab" role="tab" data-tab="income">', '<button class="tab" role="tab" data-tab="home">Home</button>\n    <button class="tab" role="tab" data-tab="income">');
+s = s.replace('<section class="panel" id="panel-income" role="tabpanel"></section>', '<section class="panel" id="panel-home" role="tabpanel"></section>\n    <section class="panel" id="panel-income" role="tabpanel" hidden></section>');
+if(!s.includes("const view = { tab:'income'")) throw new Error('patch.js: view not found');
+s = s.replace("const view = { tab:'income'", "const view = { tab:'home'");
 s = s.replace(/<button class="tab" role="tab" data-tab="(\w+)">[^<]*<\/button>/g, (m, k) =>
   TAB_ICONS[k] ? `<button class="tab" role="tab" data-tab="${k}" aria-label="${TAB_ICONS[k][0]}">${TAB_ICONS[k][1]}<span class="tab-lbl">${TAB_ICONS[k][0]}</span></button>` : m);
 // dark mode: chart colours + the theme colour. Green is income, a soft coral is spending.
@@ -121,7 +127,11 @@ fs.writeFileSync(p, s);
   let h = fs.readFileSync(p, 'utf8');
   const start = h.indexOf('  // gap chart\n'), end = h.indexOf('  // by person\n');
   if(start < 0 || end < start) throw new Error('patch.js: gap chart block not found');
-  h = h.slice(0, start) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + h.slice(end);
+  h = h.slice(0, start) + "  drawWave($('#ch-gap'), $('#wave-range'), drawCharts);\n\n" + h.slice(end);
+  // the wave chart and the Home tab go into the main script, just before the app starts
+  const startAt = h.indexOf('/* ---------- start ---------- */');
+  if(startAt < 0) throw new Error('patch.js: start marker not found');
+  h = h.slice(0, startAt) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-home.js', 'utf8') + '\n' + h.slice(startAt);
   const key = /<div class="gap-key">[\s\S]*?<\/div>/;
   if(!key.test(h)) throw new Error('patch.js: gap chart key not found');
   h = h.replace(key, '<div class="gap-key"><span><i class="k-in"></i>Came in</span><span><i class="k-out"></i>Went out</span><span><i class="k-aside"></i>Set aside</span><span class="k-note">Past the bright line is the forecast</span></div>');

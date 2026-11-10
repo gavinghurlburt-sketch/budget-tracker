@@ -318,3 +318,38 @@ html body .range-switch button{position:relative; z-index:1; min-height:36px; pa
 html body .range-switch button[aria-pressed="true"]{color:var(--ink);}
 html body .range-switch button:focus-visible{outline:2px solid var(--green); outline-offset:2px;}
 @media (prefers-reduced-motion: reduce){ html body .range-switch .range-thumb{transition:none;} }
+
+/* ---------- header: title and month centred; sync on the left, settings on the right ---------- */
+html body .top{flex-direction:column; align-items:stretch; gap:14px; text-align:center;}
+html body .top > div:first-child{width:100%;}
+html body .top-right{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:8px; width:100%;}
+html body .top-right > *{grid-row:1;}
+html body .top-right .sync-pill{grid-column:1; justify-self:start; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.74rem; padding:5px 10px;}
+html body .top-right .month-nav{grid-column:2; justify-self:center;}
+html body .top-right .settings-btn{grid-column:3; justify-self:end;}
+
+/* ---------- Home ---------- */
+html body .home-actions{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:4px 0 26px;}
+html body .home-act{--t:var(--g-green); min-height:96px; padding:14px 6px; border:0; border-radius:26px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px;
+  font:inherit; font-size:.9rem; font-weight:800; color:var(--ink); line-height:1.15; text-align:center;
+  background:color-mix(in srgb, var(--t) 18%, rgba(255,255,255,.04));
+  -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px color-mix(in srgb, var(--t) 40%, transparent), 0 8px 24px color-mix(in srgb, var(--t) 12%, transparent);
+  -webkit-tap-highlight-color:transparent; transition:transform .12s ease, background-color .15s ease;}
+html body .home-act svg{width:30px; height:30px; color:var(--t); filter:drop-shadow(0 0 8px color-mix(in srgb, var(--t) 55%, transparent));}
+html body .home-act:active{transform:scale(.96); background:color-mix(in srgb, var(--t) 28%, rgba(255,255,255,.04));}
+html body .home-act:focus-visible{outline:2px solid var(--t); outline-offset:2px;}
+html body .home-act.in{--t:var(--in);}
+html body .home-act.out{--t:var(--out);}
+html body .home-act.aside{--t:var(--aside);}
+html body .home-chart{border-top:0; padding-top:0;}
+/* picking a goal: one big glass row per goal */
+html body .goal-pick{display:flex; flex-direction:column; gap:10px; padding-bottom:calc(env(safe-area-inset-bottom) + 12px);}
+html body .goal-pick-btn{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; min-height:60px; padding:10px 18px;
+  border:0; border-radius:999px; font:inherit; color:var(--ink); text-align:left; cursor:pointer;
+  background:color-mix(in srgb, var(--aside) 14%, rgba(255,255,255,.04)); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px color-mix(in srgb, var(--aside) 35%, transparent);}
+html body .goal-pick-btn .gp-emoji{font-size:1.4rem;}
+html body .goal-pick-btn .gp-name{font-weight:800;}
+html body .goal-pick-btn .gp-saved{color:var(--ink-soft); font-size:.85rem; white-space:nowrap;}

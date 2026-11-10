@@ -1,16 +1,16 @@
-  // gap chart (iPhone build): layered glowing waves, with a 30 days / 3 months / 1 year switch.
-  // Spliced in by scripts/patch.js in place of the web version's line chart.
-  const gapCanvas = $('#ch-gap');
-  if(gapCanvas){
+/* Income vs. spending as layered glowing waves, with a 30 days / 3 months / 1 year switch (iPhone build).
+   patch.js puts this in the main script; the Charts tab and the Home tab both draw with it.
+   canvas: where to draw. sw: that chart's range switch. redraw: what to call when the range changes. */
+function drawWave(gapCanvas, sw, redraw){
+  if(gapCanvas && typeof Chart !== 'undefined'){
     // ---- range: remembered on this phone; 1 year is the default ----
     const RANGE_KEY = 'budgetrr-wave-range', RANGES = ['30d', '3m', '1y'];
     let range = '1y'; try{ const r = localStorage.getItem(RANGE_KEY); if(RANGES.includes(r)) range = r; }catch(e){}
-    const sw = $('#wave-range');
     if(sw){
       sw.style.setProperty('--i', RANGES.indexOf(range));
       sw.querySelectorAll('button').forEach(b => {
         b.setAttribute('aria-pressed', String(b.dataset.range === range));
-        b.onclick = () => { if(b.dataset.range === range) return; try{ localStorage.setItem(RANGE_KEY, b.dataset.range); }catch(e){} drawCharts(); };
+        b.onclick = () => { if(b.dataset.range === range) return; try{ localStorage.setItem(RANGE_KEY, b.dataset.range); }catch(e){} redraw(); };
       });
     }
 
@@ -133,4 +133,4 @@
               color: c => c.index === ci ? '#EAF2EC' : 'rgba(161,178,166,.75)' } } } }
     }));
   }
-
+}
