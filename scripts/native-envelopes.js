@@ -60,19 +60,48 @@ function envNudge(ym){
 // ---- how an envelope looks: a slim glass row with its icon, name, "$88 of $140" and a bar ----
 function envRow(env, ym){
   const r = envState(env, ym), pct = Math.min(100, r.used * 100);
-  return `<button type="button" class="env-row ${r.state}" data-action="edit-envelope" data-id="${env.id}" aria-label="${esc(env.name)}: ${money0(r.spent)} of ${money0(r.amount)}">
+  const fresh = env.id === envJustAdded ? ' just-added' : '';
+  return `<button type="button" class="env-row ${r.state}${fresh}" data-action="edit-envelope" data-id="${env.id}" aria-label="${esc(env.name)}: ${money0(r.spent)} of ${money0(r.amount)}">
     <span class="env-ic-wrap">${envSvg(env.icon)}</span>
     <span class="env-main"><span class="env-top"><b>${esc(env.name)}</b><span class="env-amt">${money0(r.spent)} <small>of ${money0(r.amount)}</small></span></span>
       <span class="env-track"><span style="width:${pct}%"></span>${ym === CUR ? `<i class="env-today" style="left:${Math.round(r.done * 100)}%"></i>` : ''}</span></span>
   </button>`;
 }
+// ---- suggested envelopes: faded, dashed rows that sit right in the list, each with its own "+ Add" and an x to hide it.
+//      Adding one turns that same row solid in place; hiding or adding can be undone. Hidden ones are saved with the
+//      budget (S.envDismissed), so they stay hidden on both phones. ----
+function starterOpen(i){
+  const st = ENV_STARTERS[i], used = new Set(S.envelopes.flatMap(x => x.categories || []));
+  return !(S.envDismissed || []).includes(st.name) && !S.envelopes.some(x => x.starter === i || x.name === st.name)
+    && st.categories.some(c => S.expenseCategories.includes(c) && !used.has(c));
+}
+function ghostRow(i){
+  const st = ENV_STARTERS[i];
+  return `<div class="env-row ghost" role="group" aria-label="Suggested envelope: ${st.name}, ${money0(st.amount)} a month">
+    <span class="env-ic-wrap">${envSvg(st.icon)}</span>
+    <span class="env-main"><span class="env-top"><b>${st.name}</b></span><span class="env-sub-line"><span class="env-tag">Suggested</span>${money0(st.amount)} a month</span></span>
+    <span class="env-ghost-acts"><button type="button" class="env-add" data-action="env-starter" data-i="${i}">+ Add</button>
+      <button type="button" class="env-x" data-action="env-dismiss" data-i="${i}" aria-label="Hide the ${st.name} suggestion">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17"/></svg>'}</button></span>
+  </div>`;
+}
+let envJustAdded = null;   // the envelope that just turned solid, so it can settle in with a little glow
 function envelopesBlock(ym, where){
-  if(!S.envelopes.length){
-    return where === 'home' ? `<div class="env-empty"><p>Give your spending envelopes, like $300 for groceries or $140 for eating out.</p>
-      <button type="button" class="btn" data-action="env-starters">Set up envelopes</button></div>` : '';
-  }
-  const nudge = envNudge(ym);
-  return `${nudge ? `<p class="env-nudge">${nudge}</p>` : ''}<div class="env-list">${S.envelopes.map(e => envRow(e, ym)).join('')}</div>`;
+  // your own envelopes first, then the suggestions in their usual order; an added suggestion keeps its spot
+  const own = S.envelopes.filter(e => e.starter == null), fromStarters = ENV_STARTERS.map((st, i) => S.envelopes.find(e => e.starter === i) || (starterOpen(i) ? i : null)).filter(x => x != null);
+  const rows = [...own.map(e => envRow(e, ym)), ...fromStarters.map(x => typeof x === 'number' ? ghostRow(x) : envRow(x, ym))].join('');
+  const nudge = envNudge(ym), anyGhost = fromStarters.some(x => typeof x === 'number');
+  const intro = !S.envelopes.length && anyGhost ? `<p class="env-nudge">A set amount each month for things like groceries or eating out. Add the suggestions you want, or make your own.</p>` : '';
+  if(!rows) return where === 'home' ? `<div class="env-empty"><p>Give your spending envelopes, like $300 a month for groceries.</p><button type="button" class="btn" data-action="add-envelope">Make an envelope</button></div>` : '';
+  return `${intro}${nudge ? `<p class="env-nudge">${nudge}</p>` : ''}<div class="env-list">${rows}</div>`;
+}
+// a glass note with Undo, above the tab bar, for a few seconds
+let undoTimer;
+function undoToast(msg, undo){
+  let t = $('#env-undo'); if(!t){ t = document.createElement('div'); t.id = 'env-undo'; t.className = 'env-undo'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.innerHTML = `<span>${esc(msg)}</span><button type="button">Undo</button>`;
+  t.querySelector('button').onclick = () => { t.classList.remove('show'); clearTimeout(undoTimer); undo(); };
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(undoTimer); undoTimer = setTimeout(() => t.classList.remove('show'), 5000);
 }
 
 // ---- Home: envelopes sit between the chart and the buttons ----
@@ -80,7 +109,7 @@ const renderHomeBase = renderHome;
 renderHome = function(){
   renderHomeBase();
   const acts = $('#panel-home .home-actions'); if(!acts) return;
-  acts.insertAdjacentHTML('beforebegin', `<section class="env-home"><div class="env-head"><h3>Envelopes</h3>${S.envelopes.length ? '<button type="button" class="linkish" data-action="add-envelope">+ New</button>' : ''}</div>${envelopesBlock(view.month, 'home')}</section>`);
+  acts.insertAdjacentHTML('beforebegin', `<section class="env-home"><div class="env-head"><h3>Envelopes</h3><button type="button" class="linkish" data-action="add-envelope">+ New</button></div>${envelopesBlock(view.month, 'home')}</section>`);
 };
 // ---- Expenses page: the place to see and manage them, right under "Log something you spent" ----
 const renderExpensesBase = renderExpenses;
@@ -88,17 +117,11 @@ renderExpenses = function(){
   renderExpensesBase();
   const el = $('#panel-expenses'), form = el && el.querySelector('form.quick'); if(!form) return;
   form.insertAdjacentHTML('afterend', `<div class="card env-card"><div class="env-head"><h3>Envelopes</h3><button type="button" class="btn ghost small" data-action="add-envelope">+ New envelope</button></div>
-    <p class="muted env-help">A set amount each month for things like groceries or eating out. Spending in the categories you pick counts toward it, and it starts fresh each month.</p>
-    ${envelopesBlock(view.month, 'page')}${starterButtons() ? `<div class="env-starters">${S.envelopes.length ? '<span class="env-sub">Quick add</span>' : ''}${starterButtons()}</div>` : ''}</div>`);
+    <p class="muted env-help">Spending in the categories you pick counts toward each envelope, and they start fresh each month.</p>
+    ${envelopesBlock(view.month, 'page')}</div>`);
   // a small icon beside each category in "Where it went"
   el.querySelectorAll('.bar-row .bar-top > span:first-child').forEach(s => { s.insertAdjacentHTML('afterbegin', envSvg(iconFor(s.textContent), 'cat-ic')); });
 };
-// starters that haven't been added yet (and whose category isn't already in an envelope)
-function starterButtons(){
-  const used = new Set(S.envelopes.flatMap(x => x.categories || []));
-  return ENV_STARTERS.map((st, i) => [st, i]).filter(([st]) => !S.envelopes.some(x => x.name === st.name) && st.categories.some(c => S.expenseCategories.includes(c) && !used.has(c))).map(([st, i]) => `<button type="button" class="env-starter" data-action="env-starter" data-i="${i}">${envSvg(st.icon)}<span><b>${st.name}</b> ${money0(st.amount)} a month</span></button>`).join('');
-}
-
 // ---- making and changing envelopes ----
 function envelopeDialog(env){
   let chose = !!env;   // a new envelope's icon follows its name and categories until you pick one yourself
@@ -140,25 +163,24 @@ function envelopeDialog(env){
     dlgForm.querySelectorAll('input[name="cat"]').forEach(c => c.addEventListener('change', () => { if(c.checked) show(c.value); }));
   }
 }
-function addStarter(st){
-  const used = new Set(S.envelopes.flatMap(x => x.categories || []));
-  const cats = st.categories.filter(c => S.expenseCategories.includes(c) && !used.has(c));
-  if(!cats.length || S.envelopes.some(x => x.name === st.name)){ envelopeDialog(null); return; }
-  S.envelopes.push({ id:uid(), name:st.name, amount:st.amount, icon:st.icon, categories:cats });
-  commit(`${st.name} envelope added. Tap it to change the amount.`);
-}
-function startersSheet(){
-  openDialog('Set up envelopes', `<p class="muted" style="margin:0 0 12px">Start with one of these and change the amount any time, or make your own.</p>
-    ${starterButtons() ? `<div class="env-starters">${starterButtons()}</div>` : ''}
-    <div class="dlg-actions"><button type="button" class="btn ghost" data-action="close-dialog">Done</button><button type="button" class="btn" data-action="add-envelope">Make my own</button></div>`, null);
+function addStarter(i){
+  const st = ENV_STARTERS[i], used = new Set(S.envelopes.flatMap(x => x.categories || []));
+  const cats = st.categories.filter(c => S.expenseCategories.includes(c) && !used.has(c)); if(!cats.length) return;
+  const env = { id:uid(), name:st.name, amount:st.amount, icon:st.icon, categories:cats, starter:i };
+  S.envelopes.push(env); envJustAdded = env.id; commit(); setTimeout(() => { envJustAdded = null; }, 1200);
+  undoToast(`Added ${st.name}`, () => { S.envelopes = S.envelopes.filter(x => x.id !== env.id); commit(); });
 }
 actions['add-envelope'] = () => { if(dlg.open) closeDialog(); envelopeDialog(null); };
 actions['edit-envelope'] = b => { const env = S.envelopes.find(x => x.id === b.dataset.id); if(env) envelopeDialog(env); };
 actions['delete-envelope'] = b => {
   const env = S.envelopes.find(x => x.id === b.dataset.id); if(!env) return;
   if(!confirm(`Delete the ${env.name} envelope? Your logged spending stays.`)) return;
-  S.envelopes = S.envelopes.filter(x => x.id !== env.id); closeDialog(); commit('Envelope deleted');
+  S.envelopes = S.envelopes.filter(x => x.id !== env.id);
+  if(env.starter != null) S.envDismissed = [...new Set([...(S.envDismissed || []), ENV_STARTERS[env.starter].name])];   // so it doesn't come back as a suggestion
+  closeDialog(); commit('Envelope deleted');
 };
-actions['env-starters'] = () => startersSheet();
-actions['env-starter'] = b => { const inSheet = dlg.open; addStarter(ENV_STARTERS[+b.dataset.i]); if(inSheet && dlg.open) startersSheet(); };
-
+actions['env-starter'] = b => addStarter(+b.dataset.i);
+actions['env-dismiss'] = b => {
+  const name = ENV_STARTERS[+b.dataset.i].name; S.envDismissed = [...(S.envDismissed || []), name]; commit();
+  undoToast(`Hid the ${name} suggestion`, () => { S.envDismissed = (S.envDismissed || []).filter(n => n !== name); commit(); });
+};

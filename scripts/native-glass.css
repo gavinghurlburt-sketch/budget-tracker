@@ -428,3 +428,33 @@ html body .wave-verdict.bad b{color:var(--out); text-shadow:0 0 18px color-mix(i
 html body .env-home + .home-actions{margin-top:0;}
 html body .home-chart{margin:0 0 26px;}
 html body .wave-verdict b{font-size:1.6rem;}
+
+/* suggested envelopes: see-through and dashed, clearly not yours yet, with a plain "+ Add" and a small x */
+html body .env-row.ghost{cursor:default; background:transparent; -webkit-backdrop-filter:none; backdrop-filter:none;
+  box-shadow:none; outline:1.5px dashed rgba(234,242,236,.22); outline-offset:-1.5px; grid-template-columns:auto minmax(0,1fr) auto; padding:10px 10px 10px 10px;}
+html body .env-row.ghost:active{transform:none;}
+html body .env-row.ghost .env-ic-wrap{opacity:.55;}
+html body .env-row.ghost .env-top b{color:var(--ink-soft);}
+html body .env-tag{font-size:.68rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); margin-right:8px;}
+html body .env-sub-line{font-size:.84rem; color:var(--ink-soft); opacity:.85; white-space:nowrap;}
+html body .env-ghost-acts{display:flex; align-items:center; gap:6px;}
+html body .env-add{min-height:38px; padding:0 14px; border:0; border-radius:999px; font:inherit; font-size:.88rem; font-weight:800; color:var(--ink); cursor:pointer; white-space:nowrap;
+  background:color-mix(in srgb, var(--in) 24%, transparent); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px color-mix(in srgb, var(--in) 55%, transparent);}
+html body .env-x{display:grid; place-items:center; width:32px; height:32px; padding:0; border:0; border-radius:50%; color:var(--ink-soft); cursor:pointer;
+  background:rgba(255,255,255,.04); box-shadow:inset 0 0 0 1px var(--g-ring);}
+html body .env-x svg{width:14px; height:14px;}
+html body .env-add:focus-visible, html body .env-x:focus-visible{outline:2px solid var(--in); outline-offset:2px;}
+/* an envelope that was just added settles in with a soft glow, right where the suggestion was */
+@keyframes env-settle{0%{transform:scale(.97); box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px color-mix(in srgb, var(--p) 60%, transparent), 0 0 26px color-mix(in srgb, var(--p) 45%, transparent);}
+  100%{transform:none;}}
+html body .env-row.just-added{animation:env-settle .7s cubic-bezier(.3,1.3,.5,1);}
+@media (prefers-reduced-motion: reduce){ html body .env-row.just-added{animation:none;} }
+/* the Undo note: a glass pill just above the tab bar */
+html body .env-undo{position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 84px); z-index:60; transform:translateX(-50%) translateY(16px); opacity:0; pointer-events:none;
+  display:flex; align-items:center; gap:12px; width:max-content; max-width:calc(100vw - 32px); white-space:nowrap; padding:8px 8px 8px 18px; border-radius:999px; color:var(--ink); font-weight:700; font-size:.9rem;
+  background:color-mix(in srgb, var(--sheet) 82%, transparent); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:0 14px 40px rgba(0,0,0,.3), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring); transition:opacity .2s, transform .25s;}
+html body .env-undo.show{opacity:1; transform:translateX(-50%); pointer-events:auto;}
+html body .env-undo button{min-height:36px; padding:0 14px; border:0; border-radius:999px; font:inherit; font-weight:800; color:var(--ink); cursor:pointer; white-space:nowrap;
+  background:color-mix(in srgb, var(--in) 24%, transparent); box-shadow:inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px color-mix(in srgb, var(--in) 55%, transparent);}
