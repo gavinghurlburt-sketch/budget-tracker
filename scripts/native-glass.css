@@ -304,7 +304,8 @@ html body .gap-key .k-out{background:var(--out); box-shadow:0 0 8px var(--out);}
 html body .gap-key .k-aside{background:var(--aside); box-shadow:0 0 8px var(--aside);}
 html body .gap-key .k-note{flex-basis:100%; color:var(--ink-soft); opacity:.8;}
 /* the chart's range switch: one frosted pill with a green glass thumb that slides to the chosen range */
-html body .gap-head{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 12px;}
+html body .gap-head{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center;}
+html body .gap-key{justify-content:center; text-align:center;}
 html body .gap-head h3{margin:0;}
 html body .range-switch{position:relative; display:grid; grid-template-columns:repeat(3,1fr); padding:3px; border-radius:999px;
   background:var(--g-fill); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
@@ -353,3 +354,68 @@ html body .goal-pick-btn{display:grid; grid-template-columns:auto 1fr auto; alig
 html body .goal-pick-btn .gp-emoji{font-size:1.4rem;}
 html body .goal-pick-btn .gp-name{font-weight:800;}
 html body .goal-pick-btn .gp-saved{color:var(--ink-soft); font-size:.85rem; white-space:nowrap;}
+
+/* ---------- Envelopes: slim glass rows, coloured by pace (green on pace, gold ahead of the month, coral over) ---------- */
+html body .env-home{margin:0 0 26px;}
+html body .env-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
+html body .env-head h3{margin:0;}
+html body .env-help{margin:0 0 14px; font-size:.88rem;}
+html body .env-nudge{margin:0 0 12px; padding:12px 16px; border-radius:20px; font-size:.92rem; line-height:1.4; color:var(--ink);
+  background:rgba(255,255,255,.04); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .env-list{display:flex; flex-direction:column; gap:8px;}
+html body .env-row{--p:var(--in); display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:12px; width:100%;
+  padding:10px 16px 12px 10px; border:0; border-radius:22px; font:inherit; color:var(--ink); text-align:left; cursor:pointer;
+  background:color-mix(in srgb, var(--p) 8%, rgba(255,255,255,.035)); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px color-mix(in srgb, var(--p) 22%, transparent);
+  -webkit-tap-highlight-color:transparent; transition:transform .12s ease;}
+html body .env-row:active{transform:scale(.985);}
+html body .env-row:focus-visible{outline:2px solid var(--p); outline-offset:2px;}
+html body .env-row.ahead{--p:#E2BE5E;}
+html body .env-row.over{--p:var(--out);}
+html body .env-ic-wrap{display:grid; place-items:center; width:38px; height:38px; border-radius:50%; color:var(--p);
+  background:color-mix(in srgb, var(--p) 16%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--p) 32%, transparent);}
+html body .env-ic{width:21px; height:21px; filter:drop-shadow(0 0 6px color-mix(in srgb, var(--p, var(--in)) 50%, transparent));}
+html body .env-main{display:flex; flex-direction:column; gap:7px; min-width:0;}
+html body .env-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+html body .env-top b{font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+html body .env-amt{font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums;}
+html body .env-amt small{font-weight:600; color:var(--ink-soft); font-size:.82rem;}
+html body .env-track{position:relative; height:6px; border-radius:999px; background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(0,0,0,.14);}
+html body .env-track > span{position:absolute; inset:0 auto 0 0; border-radius:999px; background:var(--p); box-shadow:0 0 10px color-mix(in srgb, var(--p) 55%, transparent);}
+/* a small tick where today falls in the month, so you can see pace at a glance */
+html body .env-today{position:absolute; top:-3px; bottom:-3px; width:2px; margin-left:-1px; border-radius:2px; background:rgba(234,242,236,.55);}
+html body .env-empty{text-align:center; padding:18px 16px; border-radius:24px; background:rgba(255,255,255,.035);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .env-empty p{margin:0 0 12px; color:var(--ink-soft); font-size:.92rem;}
+html body .env-starters{display:flex; flex-direction:column; gap:8px; margin-top:12px;}
+html body .env-sub{font-size:.78rem; font-weight:800; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.06em;}
+html body .env-starter{--p:var(--in); display:flex; align-items:center; gap:12px; min-height:52px; padding:8px 16px; border:0; border-radius:999px;
+  font:inherit; color:var(--ink); text-align:left; cursor:pointer; background:rgba(255,255,255,.04);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .env-starter .env-ic{color:var(--in);}
+html body .env-starter span{color:var(--ink-soft); font-size:.9rem;}
+html body .env-starter b{color:var(--ink); font-weight:800; margin-right:4px;}
+/* the edit sheet: an icon grid and category chips */
+html body .env-icons{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px;}
+html body .env-icon-pick{position:relative; display:block; cursor:pointer;}
+html body .env-icon-pick input{position:absolute; opacity:0; pointer-events:none;}
+html body .env-icon-pick span{display:grid; place-items:center; aspect-ratio:1; border-radius:14px; color:var(--ink-soft);
+  background:rgba(255,255,255,.04); box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring); transition:background-color .15s, color .15s;}
+html body .env-icon-pick span .env-ic{filter:none;}
+html body .env-icon-pick input:checked + span{color:var(--in); background:color-mix(in srgb, var(--in) 20%, transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px color-mix(in srgb, var(--in) 55%, transparent), 0 0 12px color-mix(in srgb, var(--in) 22%, transparent);}
+html body .env-icon-pick input:focus-visible + span{outline:2px solid var(--in); outline-offset:2px;}
+html body .env-cats{display:flex; flex-wrap:wrap; gap:8px;}
+html body .env-cat{position:relative; cursor:pointer;}
+html body .env-cat input{position:absolute; opacity:0; pointer-events:none;}
+html body .env-cat span{display:inline-flex; align-items:center; gap:6px; min-height:38px; padding:0 14px; border-radius:999px; font-size:.88rem; font-weight:700; color:var(--ink-soft);
+  background:rgba(255,255,255,.04); box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring); transition:background-color .15s, color .15s;}
+html body .env-cat input:checked + span{color:var(--ink); background:color-mix(in srgb, var(--in) 20%, transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px color-mix(in srgb, var(--in) 55%, transparent);}
+html body .env-cat input:focus-visible + span{outline:2px solid var(--in); outline-offset:2px;}
+html body .env-cat.taken span{opacity:.45; cursor:default;}
+html body .env-cat small{font-weight:600; font-size:.74rem;}
+html body .cat-ic{width:16px; height:16px; flex:none; color:var(--ink-soft);}
+html body .bar-top > span:first-child{display:inline-flex; align-items:center; gap:7px;}
+html body .env-card .env-head{margin-bottom:6px;}

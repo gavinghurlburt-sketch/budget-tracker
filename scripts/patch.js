@@ -131,7 +131,7 @@ fs.writeFileSync(p, s);
   // the wave chart and the Home tab go into the main script, just before the app starts
   const startAt = h.indexOf('/* ---------- start ---------- */');
   if(startAt < 0) throw new Error('patch.js: start marker not found');
-  h = h.slice(0, startAt) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-home.js', 'utf8') + '\n' + h.slice(startAt);
+  h = h.slice(0, startAt) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-home.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-envelopes.js', 'utf8') + '\n' + h.slice(startAt);
   const key = /<div class="gap-key">[\s\S]*?<\/div>/;
   if(!key.test(h)) throw new Error('patch.js: gap chart key not found');
   h = h.replace(key, '<div class="gap-key"><span><i class="k-in"></i>Came in</span><span><i class="k-out"></i>Went out</span><span><i class="k-aside"></i>Set aside</span><span class="k-note">Past the bright line is the forecast</span></div>');
@@ -139,5 +139,9 @@ fs.writeFileSync(p, s);
   if(!h.includes('<h3>Income vs. spending</h3>')) throw new Error('patch.js: gap chart heading not found');
   h = h.replace('<h3>Income vs. spending</h3>', '<div class="gap-head"><h3>Income vs. spending</h3>${hasData ? `<div class="range-switch" id="wave-range" role="group" aria-label="Chart range"><span class="range-thumb" aria-hidden="true"></span><button type="button" data-range="30d">30 days</button><button type="button" data-range="3m">3 months</button><button type="button" data-range="1y">1 year</button></div>` : ``}</div>');
   h = h.replace('aria-label="Line chart of income versus spending by month"', 'aria-label="Wave chart of money that came in, went out and was set aside, by month"');
+  // envelopes are saved with the rest of the budget (so both phones share them); make sure the list always exists
+  const norm = "['sources','income','expenses','bills','goals','contributions'].forEach";
+  if(!h.includes(norm)) throw new Error('patch.js: normalize list not found');
+  h = h.replace(norm, "['sources','income','expenses','bills','goals','contributions','envelopes'].forEach");
   fs.writeFileSync(p, h);
 }
