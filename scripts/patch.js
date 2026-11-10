@@ -7,7 +7,7 @@ let s = fs.readFileSync(p, 'utf8');
 
 // 1. zoom lock + light-only form controls
 s = s.replace(/<meta name="viewport"[^>]*>/,
-  '<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">\n<meta name="color-scheme" content="light">');
+  '<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">\n<meta name="color-scheme" content="dark">');
 
 // 2. bundle libraries (replace CDN scripts)
 fs.mkdirSync('www/vendor', { recursive: true });
@@ -31,7 +31,7 @@ s = s.replace(/<link href="https:\/\/fonts\.googleapis\.com[^>]*>/, `<style>${fa
 
 // 4. iOS CSS + scripts
 const css = `<style>
-  html{color-scheme:light;-webkit-text-size-adjust:100%;touch-action:manipulation;}
+  html{color-scheme:dark;-webkit-text-size-adjust:100%;touch-action:manipulation;}
   /* safe areas */
   html body .wrap{padding-top:calc(env(safe-area-inset-top) + 16px);padding-bottom:calc(env(safe-area-inset-bottom) + 64px);padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));}
   html body .toast{bottom:calc(env(safe-area-inset-bottom) + 20px);}
@@ -96,7 +96,21 @@ const TAB_ICONS = {
 };
 s = s.replace(/<button class="tab" role="tab" data-tab="(\w+)">[^<]*<\/button>/g, (m, k) =>
   TAB_ICONS[k] ? `<button class="tab" role="tab" data-tab="${k}" aria-label="${TAB_ICONS[k][0]}">${TAB_ICONS[k][1]}<span class="tab-lbl">${TAB_ICONS[k][0]}</span></button>` : m);
+// dark mode: chart colours + the theme colour. Green is income, a muted gold is spending.
+const swaps = [
+  ['<meta name="theme-color" content="#EFE3CF">', '<meta name="theme-color" content="#0F1512">'],
+  ["const PERSON_COLORS = ['#6DB768','#C49A64'];", "const PERSON_COLORS = ['#74D17E','#D8BC6A'];"],
+  ["const SHARED_COLOR = '#E6D3B3';", "const SHARED_COLOR = '#7FB0A2';"],
+  ["Chart.defaults.color = '#7D6A55';", "Chart.defaults.color = '#A1B2A6';"],
+  ["'#4E9A55'", "'#74D17E'"],
+  ["'#E0852F'", "'#E2BE5E'"],
+  ['rgba(159,212,154,', 'rgba(116,209,126,'],
+  ['rgba(246,178,107,', 'rgba(226,190,94,'],
+  ["['#F6B26B','#9FD49A','#D9B98C','#F9CF9E','#7FBF7A','#E8955A','#C7DDB5','#B8946A','#FBE0BF','#A7C98F','#E5C9A3']",
+   "['#74D17E','#E2BE5E','#5FB3A1','#A9D9A0','#C9A84E','#3E8F80','#D6E7B8','#8FA89A','#F0D88E','#4E9A55','#B9C7BB']"]
+];
+swaps.forEach(([a, b]) => { s = s.split(a).join(b); });
 // charts: gridlines and doughnut seams that read on the glass surface
-s = s.split("grid:{color:'#EFE3CF'}").join("grid:{color:'rgba(74,59,44,.10)'}");
-s = s.split("borderColor:'#fff', borderWidth:3").join("borderColor:'#F7EEDF', borderWidth:3");
+s = s.split("grid:{color:'#EFE3CF'}").join("grid:{color:'rgba(255,255,255,.08)'}");
+s = s.split("borderColor:'#fff', borderWidth:3").join("borderColor:'#0F1512', borderWidth:3");
 fs.writeFileSync(p, s);

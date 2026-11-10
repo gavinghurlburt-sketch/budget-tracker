@@ -67,7 +67,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>UIUserInterfaceStyle</key>
-	<string>Light</string>
+	<string>Dark</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Budgetrr uses the camera to scan receipts.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

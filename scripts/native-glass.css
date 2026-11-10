@@ -1,24 +1,34 @@
-/* ===== Glass redesign =====
-   One continuous surface: the whole app sits on a single softly lit backdrop,
+/* ===== Glass redesign (dark) =====
+   One continuous surface: the whole app sits on a single softly lit dark backdrop,
    sections flow on it separated by space and thin solid hairlines instead of
    boxed cards, and every button and control is frosted glass with a coloured
    tint (the same look as the Us app, borrowed from creatrr).
    Loaded last by patch.js so it wins over the page's own styles.
-   Palette stays Budgetrr's: light green, light orange and tan. */
+   Colours: green is the main accent; a muted gold stands in for spending
+   (it used to be orange); a deep teal only shows up in the backdrop glow. */
 
-:root{
-  --g-fill: rgba(74,59,44,.06);
-  --g-fill-2: rgba(74,59,44,.11);
-  --g-ring: rgba(74,59,44,.10);
-  --g-hair: rgba(74,59,44,.12);
-  --g-edge: rgba(255,255,255,.9);
+html:root{
+  color-scheme: dark;
+  /* the page's own colour tokens, redefined for dark */
+  --bg:#0F1512; --paper:#17201B; --line:rgba(234,242,236,.14);
+  --tan:#3E8F80; --tan-soft:rgba(255,255,255,.06);
+  --ink:#EAF2EC; --ink-soft:#A1B2A6;
+  --green:#74D17E; --green-soft:rgba(116,209,126,.16); --green-deep:#8FE39A;
+  --orange:#E2BE5E; --orange-soft:rgba(226,190,94,.16); --orange-deep:#EBCB72;
+  --crit:#EE9A92;
+  /* glass */
+  --g-fill: rgba(255,255,255,.06);
+  --g-fill-2: rgba(255,255,255,.11);
+  --g-ring: rgba(255,255,255,.10);
+  --g-hair: rgba(255,255,255,.10);
+  --g-edge: rgba(255,255,255,.16);
   --g-blur: blur(14px) saturate(1.6);
-  --g-glow: 46%;
-  --surface: #F7EEDF;          /* the one backdrop colour */
-  --sheet: #FBF5EA;            /* what glass sheets are tinted with */
-  --g-green: #7FC27A;          /* tints for glass (a touch stronger than the soft fills) */
-  --g-orange: #F2A65A;
-  --g-tan: #D7B78A;
+  --g-glow: 30%;
+  --surface: #0F1512;          /* the one backdrop colour */
+  --sheet: #1A241F;            /* what glass sheets are tinted with */
+  --g-green: #74D17E;          /* tints for glass */
+  --g-orange: #E2BE5E;         /* muted gold: spending */
+  --g-tan: #3E8F80;            /* deep teal: glow only */
 }
 
 /* ---------- the one backdrop ---------- */
@@ -34,12 +44,12 @@ html body{background:transparent;}
 #glowOrbs i:nth-child(1){ /* top left: green */
   width:110vw; height:74vh; left:-54vw; top:-44vh; --orb-path:orbA; --orb-time:26s;
   background:radial-gradient(closest-side, color-mix(in srgb, var(--green) var(--g-glow), transparent), transparent);}
-#glowOrbs i:nth-child(2){ /* right side: orange */
+#glowOrbs i:nth-child(2){ /* right side: muted gold */
   width:96vw; height:70vh; left:62vw; top:-6vh; --orb-path:orbB; --orb-time:34s;
-  background:radial-gradient(closest-side, color-mix(in srgb, var(--orange) calc(var(--g-glow) * .8), transparent), transparent);}
-#glowOrbs i:nth-child(3){ /* bottom left: tan */
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--g-orange) calc(var(--g-glow) * .55), transparent), transparent);}
+#glowOrbs i:nth-child(3){ /* bottom left: deep teal */
   width:124vw; height:86vh; left:-40vw; top:70vh; --orb-path:orbC; --orb-time:41s;
-  background:radial-gradient(closest-side, color-mix(in srgb, var(--tan) calc(var(--g-glow) * 1.3), transparent), transparent);}
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--g-tan) calc(var(--g-glow) * 1.5), transparent), transparent);}
 @keyframes orbA{
   0%{transform:translate3d(0,0,0) scale(1);}
   35%{transform:translate3d(14vw,9vh,0) scale(1.08);}
@@ -70,16 +80,16 @@ html body .btn{border:0; border-radius:999px; color:var(--ink); font-weight:800;
   -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
   box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 60%, transparent), 0 6px 20px color-mix(in srgb, var(--g-green) 22%, transparent);}
 html body .btn:hover{filter:none;}
-html body .btn.orange{background-color:color-mix(in srgb, var(--g-orange) 32%, transparent);
-  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-orange) 62%, transparent), 0 6px 20px color-mix(in srgb, var(--g-orange) 22%, transparent);}
+/* every main action is green glass now, including the ones that used to be orange */
+html body .btn.orange{background-color:color-mix(in srgb, var(--g-green) 30%, transparent);}
 html body .btn.ghost,
 html body .btn.ghost:hover{background-color:var(--g-fill); font-weight:700;
   box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
 html body .btn.small{padding:0 14px; font-size:.86rem;}
 html body .btn.danger,
-html body .btn.danger:hover{color:var(--orange-deep); font-weight:700;
-  background-color:color-mix(in srgb, var(--orange-deep) 10%, transparent);
-  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--orange-deep) 32%, transparent);}
+html body .btn.danger:hover{color:var(--crit); font-weight:700;
+  background-color:color-mix(in srgb, var(--crit) 12%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--crit) 38%, transparent);}
 html body .btn.bill-status.paid{color:var(--green-deep);
   background-color:color-mix(in srgb, var(--g-green) 26%, transparent);
   box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 55%, transparent);}
@@ -124,9 +134,9 @@ html body .band > div::before{content:""; position:absolute; inset:0; z-index:-1
     color-mix(in srgb, var(--wash, transparent) 13%, transparent) 16%, transparent 38%);}
 html body .band .in{--wash:var(--g-green);}
 html body .band .out{--wash:var(--g-orange);}
-html body .band .aside{--wash:var(--g-tan);}
+html body .band .aside{--wash:#9FB3A7;}
 html body .band .net{--wash:transparent;}
-html body .meter{background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(74,59,44,.12);}
+html body .meter{background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(0,0,0,.12);}
 html body .meter span{background:color-mix(in srgb, var(--g-orange) 85%, transparent);}
 
 /* ---------- tabs float at the bottom, in reach of a thumb (like creatrr) ---------- */
@@ -136,7 +146,7 @@ html body .tabs{position:fixed; z-index:25; left:0; right:0; margin:0 auto; flex
   padding:5px; gap:2px; border-radius:999px;
   background-color:color-mix(in srgb, var(--sheet) 55%, transparent);
   -webkit-backdrop-filter:blur(16px) saturate(1.7); backdrop-filter:blur(16px) saturate(1.7);
-  box-shadow:0 14px 40px rgba(74,59,44,.28), 0 2px 8px rgba(74,59,44,.14), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring),
+  box-shadow:0 14px 40px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.14), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring),
     inset 1.5px 0 1px -1px var(--g-edge), inset -1.5px 0 1px -1px var(--g-edge);
   transition:opacity .2s ease, transform .2s ease;}
 /* symbols, not words: each tab is an icon, and only the open one also shows its name,
@@ -150,9 +160,7 @@ html body .tabs .tab:hover{background:transparent;}
 html body .tabs .tab[aria-selected="true"],
 html body .tabs .tab[aria-selected="true"]:hover{flex-grow:2.1; gap:7px; padding:12px 12px; color:var(--ink);
   background-color:color-mix(in srgb, var(--tab-tint, var(--g-green)) 30%, transparent);
-  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--tab-tint, var(--g-green)) 55%, transparent), 0 4px 14px rgba(74,59,44,.12);}
-html body .tabs .tab[data-tab="expenses"], html body .tabs .tab[data-tab="bills"]{--tab-tint:var(--g-orange);}
-html body .tabs .tab[data-tab="insights"]{--tab-tint:var(--g-tan);}
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--tab-tint, var(--g-green)) 55%, transparent), 0 4px 14px rgba(0,0,0,.12);}
 html body .tabs .tab-ic{display:inline-flex; line-height:0;}
 html body .tabs .tab-ic svg{display:block; width:21px; height:21px;}
 html body .tabs .tab-lbl{max-width:0; overflow:hidden; opacity:0; white-space:nowrap;
@@ -167,7 +175,7 @@ html:has(input:not([type="checkbox"]):not([type="file"]):focus, textarea:focus, 
 html body .toast{bottom:calc(env(safe-area-inset-bottom) + 84px); color:var(--ink); width:max-content; max-width:calc(100vw - 40px); text-align:center;
   background-color:color-mix(in srgb, var(--sheet) 72%, transparent);
   -webkit-backdrop-filter:blur(24px) saturate(1.6); backdrop-filter:blur(24px) saturate(1.6);
-  box-shadow:0 14px 40px rgba(74,59,44,.25), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+  box-shadow:0 14px 40px rgba(0,0,0,.25), inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
 
 /* ---------- one surface: no panels, no boxed cards ---------- */
 html body .panel{background:none; border:0; border-radius:0; padding:0;}
@@ -190,8 +198,8 @@ html body .card.person::before{content:""; position:absolute; inset:0; z-index:-
     color-mix(in srgb, var(--accent) 11%, transparent) 16%, transparent 38%);}
 html body .card.stat{position:relative; isolation:isolate; border-top:0; padding:14px 16px; border-radius:18px;}
 html body .card.stat::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit;
-  background:linear-gradient(90deg, color-mix(in srgb, var(--wash, var(--g-tan)) 30%, transparent) 0%,
-    color-mix(in srgb, var(--wash, var(--g-tan)) 11%, transparent) 16%, transparent 38%);}
+  background:linear-gradient(90deg, color-mix(in srgb, var(--wash, #9FB3A7) 30%, transparent) 0%,
+    color-mix(in srgb, var(--wash, #9FB3A7) 11%, transparent) 16%, transparent 38%);}
 html body .card.stat.in{--wash:var(--g-green); background:none;}
 html body .card.stat.out{--wash:var(--g-orange); background:none;}
 
@@ -219,22 +227,26 @@ html body .chip.green{background-color:color-mix(in srgb, var(--g-green) 22%, tr
 html body .chip.orange{background-color:color-mix(in srgb, var(--g-orange) 22%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--g-orange) 45%, transparent);}
 
 /* progress bars: a glass channel */
-html body .bar-track, html body .progress{background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(74,59,44,.12);}
+html body .bar-track, html body .progress{background:var(--g-fill-2); box-shadow:inset 0 1px 2px rgba(0,0,0,.12);}
 
 /* ---------- fields: soft glass wells, no boxes ---------- */
 html body input, html body select, html body textarea{border:1px solid transparent; border-radius:14px;
-  background-color:rgba(255,255,255,.55); box-shadow:inset 0 0 0 1px var(--g-ring);}
+  background-color:rgba(255,255,255,.06); box-shadow:inset 0 0 0 1px var(--g-ring);}
 html body input:focus, html body select:focus, html body textarea:focus{outline:none;
   border-color:color-mix(in srgb, var(--green-deep) 60%, transparent);
   box-shadow:0 0 0 3px color-mix(in srgb, var(--g-green) 30%, transparent);}
-html body input[type="checkbox"], html body input[type="checkbox"]:focus{box-shadow:none; accent-color:var(--green-deep);}
+html body input[type="checkbox"], html body input[type="checkbox"]:focus{box-shadow:none; accent-color:var(--green);}
 
 /* ---------- sheets: frosted glass over the page instead of a solid panel ---------- */
 html body dialog{border:0; background-color:color-mix(in srgb, var(--sheet) 86%, transparent);
   -webkit-backdrop-filter:blur(30px) saturate(1.6); backdrop-filter:blur(30px) saturate(1.6);}
-html body dialog::backdrop{background:rgba(74,59,44,.18);}
+html body dialog::backdrop{background:rgba(0,0,0,.18);}
 html body .dlg-head{background:color-mix(in srgb, var(--sheet) 70%, transparent);
   -webkit-backdrop-filter:blur(24px) saturate(1.6); backdrop-filter:blur(24px) saturate(1.6);}
 html body .dlg-actions{background:color-mix(in srgb, var(--sheet) 70%, transparent);
   -webkit-backdrop-filter:blur(24px) saturate(1.6); backdrop-filter:blur(24px) saturate(1.6);
   border-top:1px solid var(--g-hair);}
+
+/* dark extras: dialog backdrop, the status bar strip, the toast */
+html body dialog::backdrop{background:rgba(0,0,0,.45);}
+html body .goal.done{opacity:.6;}
