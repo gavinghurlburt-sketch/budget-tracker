@@ -264,8 +264,11 @@ html body .person-head::after{content:""; position:absolute; left:0; right:0; bo
 html body .person-head h2{display:flex; align-items:center; gap:10px; min-width:0;}
 html body .person-head h2::before{content:""; flex:none; width:12px; height:12px; border-radius:50%;
   background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);}
-html body .person-nums .big{line-height:1.2;}
-html body .person-nums small{display:block; margin-top:2px;}
+/* the total and its "in November" line sit tight together, no gap between them */
+html body .person-nums .big{line-height:1.05; margin:0;}
+html body .person-nums small{display:block; margin-top:0; line-height:1.25;}
+html body .item-side .amt{line-height:1.15;}
+html body .item-side small{line-height:1.25;}
 /* each source: name lines up with its amount at the top, tags and Edit underneath */
 html body ul.list li{align-items:baseline;}
 html body .item-side .linkish{margin-top:6px;}
