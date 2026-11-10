@@ -13,9 +13,10 @@ function renderHome(){
   const el = $('#panel-home'); if(!el) return;
   const hasData = S.income.length || S.expenses.length;
   el.innerHTML = `
-    <div class="card gap-card home-chart">
+    <div class="card gap-card home-chart" data-action="open-stats" role="button" tabindex="0" aria-label="Open all stats">
       <div class="gap-head"><p class="wave-verdict" hidden></p>${hasData ? rangeSwitch('home-range') : ''}</div>
       ${hasData ? `<div class="chart-box"><canvas id="ch-home" aria-label="Wave chart of money left over: income minus spending, as a running total"></canvas></div>
+      <div class="stats-hint">Tap for more stats<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
       <div class="gap-key"><span><i class="k-in"></i>Above $0: money left over</span><span><i class="k-out"></i>Below $0: spent more than came in</span><span class="k-note">Each point is what's left over so far that month. Past the bright line is the forecast.</span></div>`
       : `<div class="empty-note" style="margin-top:10px">Log some income and spending and your waves show up here.</div>`}
     </div>
@@ -31,9 +32,26 @@ function drawHomeChart(){
   destroyCharts();
   drawWave($('#ch-home'), $('#home-range'), drawHomeChart);
 }
-// Home renders along with every other page
+// Home renders along with every other page. The stats page has no tab: it opens from the Home chart,
+// covers the tab bar, and its Back button returns to Home.
 const renderAllPages = renderAll;
-renderAll = function(){ renderAllPages(); renderHome(); };
+renderAll = function(){
+  renderAllPages(); renderHome();
+  document.body.classList.toggle('stats-open', view.tab === 'insights');
+  const ins = $('#panel-insights');
+  if(ins && !ins.querySelector('.stats-top')) ins.insertAdjacentHTML('afterbegin', `<div class="stats-top">
+    <button type="button" class="stats-back" data-action="close-stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>Home</button></div>`);
+};
+// the range switch inside the chart card changes the range and doesn't open the stats page
+actions['open-stats'] = (t, e) => {
+  if(e && e.target.closest && e.target.closest('.range-switch')) return; // its own buttons already handled the tap
+  view.tab = 'insights'; renderAll(); window.scrollTo(0, 0);
+};
+actions['close-stats'] = () => { view.tab = 'home'; renderAll(); window.scrollTo(0, 0); };
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && view.tab === 'insights' && !(dlg && dlg.open)) actions['close-stats']();
+  if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.home-chart')) { e.preventDefault(); actions['open-stats'](e.target, e); }
+});
 window.addEventListener('resize', () => { if(view.tab === 'home') charts.forEach(c => c.resize()); });
 
 // any other sheet that opens (a receipt scan, a goal) is a different form, so it never saves as a quick log
