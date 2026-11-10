@@ -198,10 +198,6 @@ html body .empty-note{background:none; border-radius:0; padding:14px 6px;}
 
 /* a person's colour (or a figure's) washes in from the left edge and fades out,
    instead of a hard stripe across the top */
-html body .card.person{position:relative; isolation:isolate; border-top:1px solid var(--g-hair); padding:16px 14px 6px;}
-html body .card.person::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:18px;
-  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 11%, transparent) 16%, transparent 38%);}
 html body .card.stat{position:relative; isolation:isolate; border-top:0; padding:14px 16px; border-radius:18px;}
 html body .card.stat::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit;
   background:linear-gradient(90deg, color-mix(in srgb, var(--wash, #9FB3A7) 30%, transparent) 0%,
@@ -256,3 +252,25 @@ html body .dlg-actions{background:color-mix(in srgb, var(--sheet) 70%, transpare
 /* dark extras: dialog backdrop, the status bar strip, the toast */
 html body dialog::backdrop{background:rgba(0,0,0,.45);}
 html body .goal.done{opacity:.6;}
+
+/* a person's section: flush with the rest of the page (no lopsided wash),
+   their colour shows as a dot by the name and a line that fades out under the header.
+   Name and total sit on one line, the same way each source's name sits with its amount. */
+html body .card.person{border-top:1px solid var(--g-hair); padding:18px 0 4px;}
+html body .person-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+  margin-bottom:6px; padding-bottom:12px; position:relative;}
+html body .person-head::after{content:""; position:absolute; left:0; right:0; bottom:0; height:2px; border-radius:2px;
+  background:linear-gradient(90deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 35%, transparent) 30%, var(--g-hair) 70%);}
+html body .person-head h2{display:flex; align-items:center; gap:10px; min-width:0;}
+html body .person-head h2::before{content:""; flex:none; width:12px; height:12px; border-radius:50%;
+  background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);}
+html body .person-nums .big{line-height:1.2;}
+html body .person-nums small{display:block; margin-top:2px;}
+/* each source: name lines up with its amount at the top, tags and Edit underneath */
+html body ul.list li{align-items:baseline;}
+html body .item-side .linkish{margin-top:6px;}
+
+/* dropdowns: our own chevron, set comfortably inside the field */
+html body select{-webkit-appearance:none; appearance:none; padding-right:44px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A1B2A6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 16px center; background-size:16px 16px;}
