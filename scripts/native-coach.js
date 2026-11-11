@@ -211,6 +211,8 @@ actions['coach-open'] = () => {
 /* the magic: on open the floating coin flies up to its spot at the top, leaving a trail of sparkles, and the
    coach opens out from behind it; on close the coach folds back into the coin and it flies home. Only
    transform, opacity and a clip circle move, so it stays smooth on the phone. */
+// how long the coin takes to fly up; the coach starts opening just before it lands, so the hop meets the card
+const COIN_FLY_MS = 820;
 const coachMotion = () => typeof Element.prototype.animate === 'function' && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 let coachMoving = false;
 const STAR = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></svg>';
@@ -224,9 +226,9 @@ function coinFly(from, to, back){
   // it lifts up first, then glides across, growing a touch as it comes close, with a full twirl
   const kf = [
     { transform:`translate(${dx}px, ${dy}px) scale(1) rotate(0deg)` },
-    { transform:`translate(${dx * .72}px, ${dy * .38}px) scale(1.28) rotate(-210deg)`, offset:.55 },
+    { transform:`translate(${dx * .62}px, ${dy * .48}px) scale(1.24) rotate(-190deg)`, offset:.5 },
     { transform:'translate(0, 0) scale(1) rotate(-360deg)' }];
-  const a = fly.animate(back ? kf.slice().reverse() : kf, { duration:back ? 460 : 520, easing:'cubic-bezier(.4,.05,.25,1)', fill:'both' });
+  const a = fly.animate(back ? kf.slice().reverse() : kf, { duration:back ? 460 : COIN_FLY_MS, easing:back ? 'cubic-bezier(.4,.05,.25,1)' : 'cubic-bezier(.45,.05,.3,1)', fill:'both' });
   // a sparkle trail behind it
   let last = 0; const trail = t => {
     if(!fly.isConnected) return;
@@ -268,7 +270,7 @@ function coachEnter(){
   setTimeout(() => {
     const a = dlgForm.animate([{ clipPath:`circle(0px at ${c.at})` }, { clipPath:`circle(${c.R}px at ${c.at})` }], { duration:560, easing:'cubic-bezier(.25,.8,.25,1)', fill:'forwards' });
     a.finished.catch(() => {}).then(() => { dlgForm.style.clipPath = ''; a.cancel(); });
-  }, 470);
+  }, COIN_FLY_MS - 50);
 }
 const closeDialogBeforeCoach = closeDialog;
 closeDialog = function(){
