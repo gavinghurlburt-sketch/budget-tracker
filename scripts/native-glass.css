@@ -661,3 +661,8 @@ html body dialog.coach-dlg.kb .coach-sheet .dlg-body{padding-bottom:10px;}
 html body .tx.skipped .tx-what{opacity:.6;}
 html body .tx-skip{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:.88rem; color:var(--ink-soft);}
 html body .tx-skip .linkish{font-weight:800;}
+
+/* coach card: one fixed size that fills the screen; the chat scrolls inside it and new messages sit at the bottom */
+html body dialog.coach-dlg[open]{padding-top:calc(env(safe-area-inset-top) + 14px);}
+html body dialog.coach-dlg .coach-sheet{flex:1 1 auto; max-height:none;}
+html body .coach-sheet .coach-chat:not(.coach-tips){align-content:end;}
