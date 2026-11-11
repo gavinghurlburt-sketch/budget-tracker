@@ -177,6 +177,8 @@ actions['coach-open'] = () => {
   dlgForm.querySelector('.dlg-head').insertAdjacentHTML('afterbegin', `<button type="button" class="coach-mascot${coachBusy ? ' thinking' : ''}" data-action="coach-coin"><span class="cb-coin">${COIN}</span><em class="coach-badge" hidden></em></button><span class="coach-about"></span>`);
   coachHead();
   const mascot = dlgForm.querySelector('.coach-mascot'); mascot.addEventListener('animationend', e => { if(e.animationName === 'coin-hop') mascot.classList.remove('hop'); });
+  // no keyboard popping up while the coin makes its entrance; tap the box to type
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   document.body.classList.add('coach-on');
   // a floating card: it keeps to what's visible, so the question box sits right on top of the keyboard
   const vv = window.visualViewport; let base = document.documentElement.clientHeight;
@@ -195,13 +197,100 @@ actions['coach-open'] = () => {
   dlg.addEventListener('click', outside);
   if(vv){ vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
   fit();
+  coachEnter();
+  const onCancel = e => { e.preventDefault(); closeDialog(); };
+  dlg.addEventListener('cancel', onCancel);
   dlg.addEventListener('close', () => {
+    dlg.removeEventListener('cancel', onCancel);
     dlgForm.classList.remove('coach-sheet'); dlg.classList.remove('coach-dlg', 'kb'); dlg.style.top = ''; dlg.style.height = ''; dlg.style.removeProperty('--kb');
     coachFit = null; document.body.classList.remove('coach-on');
     dlg.removeEventListener('click', outside);
     if(vv){ vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
   }, { once:true });
 };
+/* the magic: on open the floating coin flies up to its spot at the top, leaving a trail of sparkles, and the
+   coach opens out from behind it; on close the coach folds back into the coin and it flies home. Only
+   transform, opacity and a clip circle move, so it stays smooth on the phone. */
+const coachMotion = () => typeof Element.prototype.animate === 'function' && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+let coachMoving = false;
+const STAR = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></svg>';
+function bubbleHome(){ const b = document.getElementById('coach-bubble'); return b ? { left:b.offsetLeft, top:b.offsetTop } : null; }
+function coinFly(from, to, back){
+  const d = dlg.getBoundingClientRect(), fly = document.createElement('span');
+  fly.className = 'cb-coin coin-fly'; fly.innerHTML = COIN;
+  fly.style.left = (to.left - d.left) + 'px'; fly.style.top = (to.top - d.top) + 'px';
+  dlg.appendChild(fly);
+  const dx = from.left - to.left, dy = from.top - to.top;
+  // it lifts up first, then glides across, growing a touch as it comes close, with a full twirl
+  const kf = [
+    { transform:`translate(${dx}px, ${dy}px) scale(1) rotate(0deg)` },
+    { transform:`translate(${dx * .72}px, ${dy * .38}px) scale(1.28) rotate(-210deg)`, offset:.55 },
+    { transform:'translate(0, 0) scale(1) rotate(-360deg)' }];
+  const a = fly.animate(back ? kf.slice().reverse() : kf, { duration:back ? 460 : 620, easing:'cubic-bezier(.4,.05,.25,1)', fill:'both' });
+  // a sparkle trail behind it
+  let last = 0; const trail = t => {
+    if(!fly.isConnected) return;
+    if(t - last > 55){ last = t; const r = fly.getBoundingClientRect(), dust = document.createElement('span');
+      dust.className = 'coin-dust'; dust.innerHTML = STAR;
+      dust.style.left = (r.left - d.left + r.width * (.2 + Math.random() * .6)) + 'px'; dust.style.top = (r.top - d.top + r.height * (.2 + Math.random() * .6)) + 'px';
+      dust.style.setProperty('--s', (.5 + Math.random() * .7).toFixed(2));
+      dlg.appendChild(dust); setTimeout(() => dust.remove(), 800); }
+    requestAnimationFrame(trail); };
+  requestAnimationFrame(trail);
+  return a.finished.catch(() => {}).then(() => fly.remove());
+}
+function coinBurst(){
+  const m = dlgForm.querySelector('.coach-mascot'); if(!m) return;
+  for(let i = 0; i < 8; i++){
+    const s = document.createElement('i'), ang = i / 8 * Math.PI * 2 + Math.random() * .4, dist = 38 + Math.random() * 18;
+    s.className = 'coin-spark'; s.innerHTML = STAR;
+    s.style.setProperty('--x', (Math.cos(ang) * dist).toFixed(1) + 'px'); s.style.setProperty('--y', (Math.sin(ang) * dist).toFixed(1) + 'px');
+    s.style.animationDelay = (Math.random() * 80).toFixed(0) + 'ms';
+    m.appendChild(s); setTimeout(() => s.remove(), 900);
+  }
+}
+function revealCircle(){
+  const sr = dlgForm.getBoundingClientRect(), mr = dlgForm.querySelector('.coach-mascot .cb-coin').getBoundingClientRect();
+  const cx = mr.left + mr.width / 2 - sr.left, cy = mr.top + mr.height / 2 - sr.top;
+  return { at:`${cx.toFixed(0)}px ${cy.toFixed(0)}px`, R:Math.ceil(Math.hypot(Math.max(cx, sr.width - cx), Math.max(cy, sr.height - cy))) + 24 };
+}
+function coachEnter(){
+  const home = bubbleHome(), coin = dlgForm.querySelector('.coach-mascot .cb-coin');
+  if(!coachMotion() || !home || !coin) return;
+  coachMoving = true;
+  const c = revealCircle();
+  dlgForm.classList.add('landing');
+  dlgForm.style.clipPath = `circle(0px at ${c.at})`;
+  coinFly(home, coin.getBoundingClientRect()).then(() => {
+    dlgForm.classList.remove('landing'); coachMood('hop'); coinBurst(); coachMoving = false;
+  });
+  // the coach blooms open from behind the coin just as it arrives
+  setTimeout(() => {
+    const a = dlgForm.animate([{ clipPath:`circle(0px at ${c.at})` }, { clipPath:`circle(${c.R}px at ${c.at})` }], { duration:560, easing:'cubic-bezier(.25,.8,.25,1)', fill:'forwards' });
+    a.finished.catch(() => {}).then(() => { dlgForm.style.clipPath = ''; a.cancel(); });
+  }, 430);
+}
+const closeDialogBeforeCoach = closeDialog;
+closeDialog = function(){
+  if(!(dlg.open && dlgForm.classList.contains('coach-sheet'))) return closeDialogBeforeCoach();
+  if(coachMoving) return;
+  const home = bubbleHome(), coin = dlgForm.querySelector('.coach-mascot .cb-coin');
+  if(!coachMotion() || !home || !coin) return closeDialogBeforeCoach();
+  coachMoving = true;
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  const c = revealCircle();
+  const a = dlgForm.animate([{ clipPath:`circle(${c.R}px at ${c.at})` }, { clipPath:`circle(0px at ${c.at})` }], { duration:340, easing:'cubic-bezier(.5,0,.75,.2)', fill:'forwards' });
+  setTimeout(() => {
+    const from = coin.getBoundingClientRect();
+    dlgForm.classList.add('landing');
+    coinFly(home, from, true).then(() => {
+      document.body.classList.add('coach-home');
+      closeDialogBeforeCoach(); a.cancel(); dlgForm.classList.remove('landing'); coachMoving = false;
+      requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('coach-home')));
+    });
+  }, 220);
+};
+
 actions['coach-ask-chip'] = t => coachAsk(t.textContent);
 actions['coach-coin'] = () => { coachView = coachView === 'tips' ? 'ask' : 'tips'; coachRefresh(); if(!coachBusy) coachMood('hop'); };
 actions['coach-view'] = t => { coachView = t.dataset.v === 'tips' ? 'tips' : 'ask'; coachRefresh(); };

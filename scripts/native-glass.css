@@ -767,3 +767,19 @@ html body .coach-badge[hidden]{display:none;}
 html body .coach-mascot[aria-pressed="true"] .cb-coin{box-shadow:0 12px 26px rgba(0,0,0,.4), 0 0 0 3px rgba(195,166,242,.55), 0 0 26px rgba(195,166,242,.45), inset 0 2px 1px rgba(255,248,220,.55), inset 0 -3px 4px rgba(90,60,10,.5), inset 0 0 0 1.5px rgba(255,230,160,.6);}
 html body .coach-back{flex:none; align-self:center; min-height:44px; padding:0 22px; border:0; border-radius:999px; font-family:var(--body); font-size:.92rem; font-weight:800; color:var(--ink); cursor:pointer;
   background:color-mix(in srgb, #C3A6F2 18%, rgba(255,255,255,.04)); box-shadow:inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px rgba(195,166,242,.4);}
+
+/* ---------- coin entrance and exit (driven from native-coach.js) ---------- */
+html body .coach-sheet{animation:none;}
+html body .coach-sheet.landing .coach-mascot{visibility:hidden;}
+html body .coin-fly{position:absolute; z-index:6; pointer-events:none; will-change:transform;
+  box-shadow:0 14px 30px rgba(0,0,0,.45), 0 0 30px rgba(226,190,94,.45), 0 0 46px rgba(195,166,242,.35), inset 0 2px 1px rgba(255,248,220,.55), inset 0 -3px 4px rgba(90,60,10,.5), inset 0 0 0 1.5px rgba(255,230,160,.6);}
+html body .coin-dust{position:absolute; z-index:5; width:12px; height:12px; margin:-6px 0 0 -6px; pointer-events:none; color:#F1E6FF;
+  filter:drop-shadow(0 0 4px rgba(195,166,242,.9)); animation:coin-dust .75s ease-out forwards;}
+html body .coin-dust svg, html body .coin-spark svg{display:block; width:100%; height:100%;}
+@keyframes coin-dust{from{opacity:1; transform:scale(var(--s, 1)) rotate(0deg);} to{opacity:0; transform:translateY(14px) scale(.1) rotate(120deg);}}
+html body .coin-spark{grid-area:1/1; z-index:3; width:11px; height:11px; pointer-events:none; color:#FFF3C4;
+  filter:drop-shadow(0 0 4px rgba(255,220,140,.9)); animation:coin-spark .7s cubic-bezier(.2,.8,.3,1) both;}
+html body .coin-spark:nth-child(even){color:#E9DCFF; filter:drop-shadow(0 0 4px rgba(195,166,242,.9));}
+@keyframes coin-spark{0%{opacity:0; transform:translate(0, 0) scale(.2);} 25%{opacity:1;} 100%{opacity:0; transform:translate(var(--x), var(--y)) scale(.9) rotate(140deg);}}
+/* while the coin flies home, the floating one waits; it reappears in place with no fade so there's no double */
+html body.coach-home .coach-bubble{transition:none;}
