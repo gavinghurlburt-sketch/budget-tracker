@@ -556,7 +556,10 @@ html body .story-toggle input{width:22px; height:22px; accent-color:#7FC27A;}
 html body dialog.coach-dlg[open]{inset:0 0 auto 0; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
   padding:calc(env(safe-area-inset-top) + 28px) 10px calc(env(safe-area-inset-bottom) + 10px);
   background-color:rgba(6,10,8,.42); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);}
-html body dialog.coach-dlg.kb[open]{padding-bottom:8px;}
+html body dialog.coach-dlg[open]{transition:padding-bottom .25s ease-out;}
+/* keyboard up: the card rides on top of the keys (--kb is the keyboard's height) and grows to use the space above */
+html body dialog.coach-dlg.kb[open]{padding-bottom:calc(var(--kb, 0px) + 8px);}
+html body dialog.coach-dlg.kb .coach-sheet{flex:1 1 auto; max-height:none; animation:none;}
 html body .coach-sheet{display:flex; flex-direction:column; min-height:0; max-height:100%; border-radius:28px; overflow:hidden;
   background-color:color-mix(in srgb, var(--sheet) 82%, transparent);
   -webkit-backdrop-filter:blur(30px) saturate(1.6); backdrop-filter:blur(30px) saturate(1.6);
@@ -650,3 +653,6 @@ html body .month-note{display:flex; align-items:center; justify-content:space-be
 html body .month-note button{font:inherit; font-weight:800; font-size:.85rem; color:var(--ink); border:0; border-radius:999px; padding:7px 12px; cursor:pointer; white-space:nowrap;
   background-color:var(--g-fill-2); box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
 @media (prefers-reduced-motion: reduce){ html body .month-pop{animation:none;} html body .month-pill svg{transition:none;} }
+/* keyboard up: the question box sits right on the keys; the "questions left" line waits until it closes */
+html body dialog.coach-dlg.kb .coach-left{display:none;}
+html body dialog.coach-dlg.kb .coach-sheet .dlg-body{padding-bottom:10px;}

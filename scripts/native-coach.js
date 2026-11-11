@@ -97,17 +97,24 @@ actions['coach-open'] = () => {
   dlgForm.classList.add('coach-sheet'); dlg.classList.add('coach-dlg');
   // a floating card: it keeps to what's visible, so the question box sits right on top of the keyboard
   const vv = window.visualViewport; let base = document.documentElement.clientHeight;
-  const fit = () => { if(!vv) return;
-    dlg.style.top = vv.offsetTop + 'px'; dlg.style.height = vv.height + 'px';
-    base = Math.max(base, vv.height);
-    dlg.classList.toggle('kb', kbUp || vv.height < base - 120);
+  const fit = () => {
+    let shrunk = 0;
+    if(vv){ dlg.style.top = vv.offsetTop + 'px'; dlg.style.height = vv.height + 'px'; base = Math.max(base, vv.height); shrunk = base - vv.height; }
+    // on the phone the page isn't resized, so the keyboard's own height lifts the card; anything the
+    // visible area already shrank by is taken off so the card never floats too high
+    const lift = Math.max(0, kbH - shrunk);
+    dlg.style.setProperty('--kb', lift + 'px');
+    dlg.classList.toggle('kb', kbUp || shrunk > 120);
     const chat = $('#coach-chat'); if(chat && coachView === 'ask') chat.scrollTop = chat.scrollHeight; };
+  coachFit = fit;
   // tapping the dimmed area around the card closes it
   const outside = e => { if(e.target === dlg) closeDialog(); };
   dlg.addEventListener('click', outside);
-  if(vv){ vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit(); }
+  if(vv){ vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
+  fit();
   dlg.addEventListener('close', () => {
-    dlgForm.classList.remove('coach-sheet'); dlg.classList.remove('coach-dlg', 'kb'); dlg.style.top = ''; dlg.style.height = '';
+    dlgForm.classList.remove('coach-sheet'); dlg.classList.remove('coach-dlg', 'kb'); dlg.style.top = ''; dlg.style.height = ''; dlg.style.removeProperty('--kb');
+    coachFit = null;
     dlg.removeEventListener('click', outside);
     if(vv){ vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
   }, { once:true });
@@ -118,12 +125,12 @@ actions['coach-tip-del'] = t => { S.coachTips = coachTips().filter(x => x.id !==
 
 /* keyboard, app-wide: no arrows-and-checkmark bar above the keys. The page itself isn't resized (that left
    black corners around the keyboard); the coach card follows the visible area instead. */
-let kbUp = false;
+let kbUp = false, kbH = 0, coachFit = null;
 (function(){
   try{ const C = window.Capacitor; if(!C || !C.isNativePlatform || !C.isNativePlatform()) return;
     const K = (C.Plugins && C.Plugins.Keyboard) || C.registerPlugin('Keyboard');
     K.setAccessoryBarVisible({ isVisible:false }).catch(() => {});
-    K.addListener('keyboardWillShow', () => { kbUp = true; dlg.classList.add('kb'); });
-    K.addListener('keyboardWillHide', () => { kbUp = false; dlg.classList.remove('kb'); });
+    K.addListener('keyboardWillShow', info => { kbUp = true; kbH = (info && info.keyboardHeight) || 0; if(coachFit) coachFit(); });
+    K.addListener('keyboardWillHide', () => { kbUp = false; kbH = 0; if(coachFit) coachFit(); });
   }catch(e){}
 })();
