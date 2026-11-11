@@ -677,20 +677,21 @@ html body .coach-bubble:active{transform:scale(.92);}
 html body.stats-open .coach-bubble{bottom:calc(env(safe-area-inset-bottom) + 18px);}
 html body.coach-on .coach-bubble{opacity:0; transform:scale(.6); pointer-events:none;}
 @keyframes cb-in{from{opacity:0; transform:scale(.4);}}
-html body .coach-bubble > span{grid-area:1/1; display:grid; place-items:center;}
+html body .cb-coin{width:58px; height:58px; border-radius:50%; display:grid; place-items:center;}
+html body .cb-coin > span{grid-area:1/1; display:grid; place-items:center;}
 
 /* a 3D glass coin, gold-tinted, with a raised rim, the coach sparkle stamped on it and a glint */
-html body .coach-bubble{color:#FFF2C9;
+html body .cb-coin{color:#FFF2C9;
   background:radial-gradient(circle at 30% 24%, rgba(255,250,225,.55), transparent 38%),
     radial-gradient(circle at 70% 82%, rgba(150,100,20,.45), transparent 55%),
     color-mix(in srgb, #E2BE5E 42%, rgba(20,22,18,.5));
   -webkit-backdrop-filter:blur(16px) saturate(1.8); backdrop-filter:blur(16px) saturate(1.8);
   box-shadow:0 12px 28px rgba(0,0,0,.45), 0 0 20px rgba(226,190,94,.28), inset 0 2px 1px rgba(255,248,220,.55), inset 0 -3px 4px rgba(90,60,10,.5), inset 0 0 0 1.5px rgba(255,230,160,.6);}
-html body .coach-bubble .cb-rim{width:44px; height:44px; border-radius:50%;
+html body .cb-coin .cb-rim{width:44px; height:44px; border-radius:50%;
   box-shadow:inset 0 0 0 1.5px rgba(255,236,180,.55), inset 0 2px 3px rgba(90,60,10,.45), 0 1px 0 rgba(255,248,220,.35);}
 /* the small sparkle hangs lower right, so nudge the pair left to sit centred on the coin */
-html body .coach-bubble svg{width:26px; height:26px; transform:translateX(-2px); color:#E9DCFF; filter:drop-shadow(0 1px 0 rgba(90,60,10,.5)) drop-shadow(0 0 5px rgba(195,166,242,.7));}
-html body .coach-bubble .cb-shine{width:58px; height:58px; border-radius:50%; overflow:hidden; pointer-events:none;
+html body .cb-coin svg{width:26px; height:26px; transform:translateX(-2px); color:#E9DCFF; filter:drop-shadow(0 1px 0 rgba(90,60,10,.5)) drop-shadow(0 0 5px rgba(195,166,242,.7));}
+html body .cb-coin .cb-shine{width:58px; height:58px; border-radius:50%; overflow:hidden; pointer-events:none;
   background:linear-gradient(115deg, transparent 38%, rgba(255,255,255,.38) 47%, transparent 56%) no-repeat; background-size:250% 100%;
   animation:cb-shine 5s ease-in-out 1s infinite;}
 @keyframes cb-shine{0%, 70%{background-position:130% 0;} 90%, 100%{background-position:-30% 0;}}
@@ -698,4 +699,54 @@ html body .coach-bubble .cb-shine{width:58px; height:58px; border-radius:50%; ov
 /* tapping the bubble: the chat grows out of the bottom-right corner */
 html body .coach-sheet{transform-origin:calc(100% - 30px) calc(100% - 30px); animation:coach-grow .34s cubic-bezier(.2,.9,.3,1.05);}
 @keyframes coach-grow{from{opacity:0; transform:scale(.12); border-radius:50%;}}
-@media (prefers-reduced-motion: reduce){ html body .coach-bubble, html body .coach-bubble .cb-shine, html body .coach-sheet{animation:none;} }
+@media (prefers-reduced-motion: reduce){ html body .coach-bubble, html body .cb-coin .cb-shine, html body .coach-sheet{animation:none;} }
+
+/* ---------- the coin as a little character ---------- */
+/* its sparkles twinkle wherever it shows: the big one breathes, the small one winks */
+html body .cb-coin .sp1, html body .cb-coin .sp2{transform-box:fill-box; transform-origin:center;}
+html body .cb-coin .sp1{animation:cb-twinkle1 3.2s ease-in-out infinite;}
+html body .cb-coin .sp2{animation:cb-twinkle2 2.6s ease-in-out .6s infinite;}
+@keyframes cb-twinkle1{0%, 100%{transform:scale(1);} 50%{transform:scale(.86);}}
+@keyframes cb-twinkle2{0%, 100%{transform:scale(1); opacity:1;} 40%{transform:scale(.4) rotate(45deg); opacity:.5;} 58%{transform:scale(1.2) rotate(0deg); opacity:1;}}
+
+/* open coach: the coin sits top centre above Ask / Money tips, with what it's talking about under it */
+html body .coach-sheet .dlg-head{flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; padding:16px 20px 2px;}
+html body .coach-sheet .dlg-head h2{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;}
+html body .coach-sheet .dlg-head .icon-btn{position:absolute; top:14px; right:14px;}
+html body .coach-about{font-size:.8rem; font-weight:800; color:var(--ink-soft); letter-spacing:.03em;}
+html body .coach-mascot{display:grid; place-items:center; perspective:320px; animation:coin-bob 3.6s ease-in-out infinite;}
+html body .coach-mascot .cb-coin{position:relative; box-shadow:0 12px 26px rgba(0,0,0,.4), 0 0 26px rgba(195,166,242,.25), inset 0 2px 1px rgba(255,248,220,.55), inset 0 -3px 4px rgba(90,60,10,.5), inset 0 0 0 1.5px rgba(255,230,160,.6);}
+@keyframes coin-bob{0%, 100%{transform:translateY(0) rotate(-4deg);} 50%{transform:translateY(-5px) rotate(4deg);}}
+/* thinking: it flips like a tossed coin and the sparkles twinkle fast */
+html body .coach-mascot.thinking{animation:coin-think 0.9s ease-in-out infinite;}
+html body .coach-mascot.thinking .cb-coin{animation:coin-flip 1.2s cubic-bezier(.45,.05,.55,.95) infinite;}
+html body .coach-mascot.thinking .sp1{animation-duration:.9s;}
+html body .coach-mascot.thinking .sp2{animation-duration:.6s; animation-delay:0s;}
+@keyframes coin-think{0%, 100%{transform:translateY(0);} 50%{transform:translateY(-8px);}}
+@keyframes coin-flip{from{transform:rotateY(0);} to{transform:rotateY(360deg);}}
+/* answered: a happy little hop */
+html body .coach-mascot.hop{animation:coin-hop .6s cubic-bezier(.3,1.6,.5,1);}
+@keyframes coin-hop{0%{transform:translateY(0) scale(1);} 30%{transform:translateY(-12px) scale(1.08);} 60%{transform:translateY(0) scale(.96, 1.04);} 100%{transform:translateY(0) scale(1);}}
+
+/* weekly tip: a little chat bubble beside the floating coin */
+html body .coach-note{position:fixed; z-index:26; right:calc(84px + env(safe-area-inset-right)); bottom:calc(env(safe-area-inset-bottom) + 92px);
+  max-width:min(250px, calc(100vw - 110px)); display:flex; align-items:flex-start; gap:4px; padding:10px 6px 10px 14px;
+  border-radius:20px 20px 6px 20px; color:var(--ink);
+  background:color-mix(in srgb, #9C7BE0 24%, rgba(18,22,26,.84));
+  -webkit-backdrop-filter:blur(18px) saturate(1.7); backdrop-filter:blur(18px) saturate(1.7);
+  box-shadow:0 10px 26px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.22), inset 0 0 0 1px rgba(195,166,242,.4);
+  animation:cn-in .45s cubic-bezier(.2,.9,.3,1.2) .4s both; transition:bottom .25s;}
+@keyframes cn-in{from{opacity:0; transform:translateX(14px) scale(.85);}}
+html body.stats-open .coach-note{bottom:calc(env(safe-area-inset-bottom) + 24px);}
+html body.coach-on .coach-note{display:none;}
+html body .cn-open{display:grid; gap:2px; padding:0; border:0; background:none; color:inherit; font-family:var(--body); text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent;}
+html body .cn-open small, html body .coach-weekly small{display:block; font-size:.7rem; font-weight:800; color:#C3A6F2; text-transform:uppercase; letter-spacing:.06em;}
+html body .cn-open span{font-size:.86rem; font-weight:700; line-height:1.3; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
+html body .cn-x{flex:none; width:26px; height:26px; border:0; border-radius:50%; background:rgba(255,255,255,.07); color:var(--ink-soft); font-size:.72rem; cursor:pointer;}
+html body .coach-weekly small{margin-bottom:3px;}
+@media (prefers-reduced-motion: reduce){ html body .coach-mascot, html body .coach-mascot .cb-coin, html body .cb-coin .sp1, html body .cb-coin .sp2, html body .coach-note{animation:none;} }
+/* keyboard up: the coin shrinks and its caption hides, so the chat keeps its room */
+html body dialog.coach-dlg.kb .coach-mascot{zoom:.68;}
+html body dialog.coach-dlg.kb .coach-about{display:none;}
+html body dialog.coach-dlg.kb .coach-sheet .dlg-head{padding:8px 20px 12px;}
+html body dialog.coach-dlg.kb .coach-sheet .dlg-head .icon-btn{top:8px;}
