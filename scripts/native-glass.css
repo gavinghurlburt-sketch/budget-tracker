@@ -602,3 +602,51 @@ html body .src-key{display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; 
 html body .src-key span{display:inline-flex; align-items:center; gap:6px;}
 html body .src-key b{color:var(--ink); font-variant-numeric:tabular-nums;}
 html body .src-key i{width:9px; height:9px; border-radius:3px; background:color-mix(in srgb, var(--t) 70%, transparent); box-shadow:inset 0 0 0 1px var(--t);}
+
+/* ---------- no top bar: Home keeps the name and a gear; the month pill sits under the chart ---------- */
+html body .month-nav, html body .sync-pill{display:none !important;}
+html body:not([data-tab="home"]) .top{display:none;}
+html body .top{flex-direction:row; align-items:center; justify-content:space-between; gap:12px; text-align:left; margin-bottom:12px;}
+html body .top > div:first-child{width:auto; min-width:0;}
+html body .top h1{margin:0; font-size:1.35rem;}
+html body .top-right{display:flex; width:auto; gap:0;}
+html body .top-right .settings-btn{width:40px; height:40px; display:grid; place-items:center; font-size:1.05rem;}
+html body .wrap > .band{display:none;}
+html body #panel-home .band{margin:4px 0 20px;}
+
+html body .month-row{position:relative; display:flex; justify-content:center; margin:14px 0 6px;}
+html body .month-pill{display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 14px 0 18px; border:0; border-radius:999px;
+  font:inherit; font-weight:800; font-size:.95rem; color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:transparent;
+  background-color:color-mix(in srgb, var(--g-green) 16%, transparent);
+  -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 40%, transparent);}
+html body .month-pill svg{width:16px; height:16px; transition:transform .2s;}
+html body .month-pill[aria-expanded="true"] svg{transform:rotate(180deg);}
+html body .month-pop{position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); z-index:30; width:min(300px, calc(100vw - 32px));
+  padding:12px; border-radius:22px; animation:month-pop .18s ease-out;
+  background-color:rgba(18,27,22,.9);
+  -webkit-backdrop-filter:blur(22px) saturate(1.6); backdrop-filter:blur(22px) saturate(1.6);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring), 0 18px 40px rgba(0,0,0,.35);}
+@keyframes month-pop{from{opacity:0; transform:translateX(-50%) translateY(-6px);}}
+html body .month-pop button{font:inherit; color:var(--ink); border:0; cursor:pointer; -webkit-tap-highlight-color:transparent;}
+html body .month-pop-year{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+html body .month-pop-year b{font-size:1rem;}
+html body .month-pop-year button{width:38px; height:38px; border-radius:50%; font-size:1.25rem; background-color:var(--g-fill);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .month-pop-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:6px;}
+html body .month-pop-grid button{position:relative; min-height:42px; border-radius:14px; font-weight:700; background-color:var(--g-fill);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .month-pop-grid button.now::after{content:""; position:absolute; left:50%; bottom:5px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:var(--g-green);}
+html body .month-pop-grid button.on{font-weight:800; background-color:color-mix(in srgb, var(--g-green) 30%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 65%, transparent);}
+html body .month-pop-now{display:block; width:100%; margin-top:8px; min-height:40px; border-radius:14px; font-weight:800;
+  background-color:color-mix(in srgb, var(--g-green) 18%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 45%, transparent);}
+
+html body .month-note{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 14px; padding:8px 8px 8px 14px; border-radius:999px; font-size:.9rem;
+  background-color:color-mix(in srgb, var(--g-green) 12%, transparent);
+  -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, var(--g-green) 35%, transparent);}
+html body .month-note button{font:inherit; font-weight:800; font-size:.85rem; color:var(--ink); border:0; border-radius:999px; padding:7px 12px; cursor:pointer; white-space:nowrap;
+  background-color:var(--g-fill-2); box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+@media (prefers-reduced-motion: reduce){ html body .month-pop{animation:none;} html body .month-pill svg{transition:none;} }
