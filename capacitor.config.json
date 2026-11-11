@@ -2,5 +2,13 @@
   "appId": "art.gavingeddes.budgetrr",
   "appName": "Budgetrr",
   "webDir": "www",
-  "ios": { "contentInset": "never" }
+  "ios": {
+    "contentInset": "never"
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
+    }
+  }
 }

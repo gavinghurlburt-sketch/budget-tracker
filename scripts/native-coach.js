@@ -72,10 +72,11 @@ actions['coach-open'] = () => {
   openDialog('Money coach', coachBody(), fd => { coachAsk(fd.get('q')); return false; });
   dlgForm.classList.add('coach-sheet'); dlg.classList.add('coach-dlg');
   // keep the sheet exactly the size of what's visible, so the question box sits right on top of the keyboard
-  const vv = window.visualViewport;
+  const vv = window.visualViewport; let base = document.documentElement.clientHeight;
   const fit = () => { if(!vv) return;
     dlg.style.top = vv.offsetTop + 'px'; dlg.style.height = vv.height + 'px';
-    dlg.classList.toggle('kb', vv.height < window.innerHeight - 120);
+    base = Math.max(base, vv.height);
+    dlg.classList.toggle('kb', kbUp || vv.height < base - 120);
     const chat = $('#coach-chat'); if(chat) chat.scrollTop = chat.scrollHeight; };
   if(vv){ vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit(); }
   dlg.addEventListener('close', () => {
@@ -84,3 +85,14 @@ actions['coach-open'] = () => {
   }, { once:true });
 };
 actions['coach-ask-chip'] = t => coachAsk(t.textContent);
+
+/* keyboard, app-wide: no arrows-and-checkmark bar above the keys, and the page shrinks to sit right on top of them */
+let kbUp = false;
+(function(){
+  try{ const C = window.Capacitor; if(!C || !C.isNativePlatform || !C.isNativePlatform()) return;
+    const K = (C.Plugins && C.Plugins.Keyboard) || C.registerPlugin('Keyboard');
+    K.setAccessoryBarVisible({ isVisible:false }).catch(() => {});
+    K.addListener('keyboardWillShow', () => { kbUp = true; dlg.classList.add('kb'); });
+    K.addListener('keyboardWillHide', () => { kbUp = false; dlg.classList.remove('kb'); });
+  }catch(e){}
+})();
