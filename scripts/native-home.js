@@ -15,9 +15,9 @@ function renderHome(){
   el.innerHTML = `
     <div class="card gap-card home-chart" data-action="open-stats" role="button" tabindex="0" aria-label="Open all stats">
       <div class="gap-head"><p class="wave-verdict" hidden></p>${hasData ? rangeSwitch('home-range') : ''}</div>
-      ${hasData ? `<div class="chart-box"><canvas id="ch-home" aria-label="Wave chart of money left over: income minus spending, as a running total"></canvas></div>
+      ${hasData ? `<div class="chart-box"><canvas id="ch-home" aria-label="Running total: everything that came in minus everything that went out, carried over month to month"></canvas></div>
       <div class="stats-hint">Tap for more stats<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
-      <div class="gap-key"><span><i class="k-in"></i>Above $0: money left over</span><span><i class="k-out"></i>Below $0: spent more than came in</span><span class="k-note">Each point is what's left over so far that month. Past the bright line is the forecast.</span></div>`
+      <div class="gap-key"><span class="k-note">Your running total since you started logging: what came in minus what went out. Like a bank balance, it carries over each month. Past the bright line is the forecast.</span></div>`
       : `<div class="empty-note" style="margin-top:10px">Log some income and spending and your waves show up here.</div>`}
     </div>
     <div class="home-actions">

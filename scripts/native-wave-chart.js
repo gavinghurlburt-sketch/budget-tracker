@@ -60,19 +60,19 @@ function drawWave(gapCanvas, sw, redraw){
     const nowWord = range === '30d' ? 'today' : range === '3m' ? 'this week' : 'this month';
     const tension = range === '30d' ? .35 : .42;
 
-    // ---- one "left over" wave: at each point, what's left over so far that month (came in minus went out).
-    //      It starts again at $0 each month, so the bright line always matches the verdict above the chart.
-    //      Above the zero line (green) money is left over; below it (coral) more went out than came in. ----
+    // ---- one running-total wave: everything that came in minus everything that went out, from the first thing
+    //      logged up to each point. Like a bank balance it carries over from month to month and never resets on
+    //      the 1st; paydays step it up and bills and spending step it down. Past the bright line it keeps going
+    //      at the usual pace. Above the zero line (green) more came in than went out; below it (coral) less. ----
     const tIso = todayStr(), dayNet = (projectedIncome() - projectedSpending()) / MO;
-    const mtd = d => { const m = ymOf(d);
-      return sum(S.income.filter(e => ymOf(e.date) === m && e.date <= d).map(e => e.amount)) - sum(S.expenses.filter(e => ymOf(e.date) === m && e.date <= d).map(e => e.amount)); };
-    const ahead = d => { const day = +d.slice(8, 10);   // a future point: today's real number plus usual days, or usual days from the 1st
-      return ymOf(d) === ymOf(tIso) ? mtd(tIso) + (day - +tIso.slice(8, 10)) * dayNet : day * dayNet; };
+    const bal = d => sum(S.income.filter(e => e.date <= d).map(e => e.amount)) - sum(S.expenses.filter(e => e.date <= d).map(e => e.amount));
+    const now = bal(tIso);
+    const ahead = d => now + Math.round((at(d) - at(tIso)) / DAY) * dayNet;   // a future point: today's total plus usual days
     const run = B.map((b,i) => {
-      // a whole month: this month's point is where it's headed (real so far plus usual days to the end)
-      if(range === '1y') return i < ci ? mtd(b.ym + '-31') : i === ci ? ahead(b.ym + '-' + pad(daysIn(b.ym))) : pInc - pExp;
+      // a whole month: where the total stood at the month's end; this month is where it's headed
+      if(range === '1y') return i < ci ? bal(b.ym + '-31') : ahead(b.ym + '-' + pad(daysIn(b.ym)));
       const d = i <= ci ? (b.to < tIso ? b.to : tIso) : b.to;
-      return i <= ci ? mtd(d) : ahead(d);
+      return i <= ci ? bal(d) : ahead(d);
     });
     const GREEN = '116,209,126', CORAL = '242,154,142';
     const zeroFrac = chart => { const a = chart.chartArea, y = chart.scales.y; if(!a || !y) return null;
@@ -85,10 +85,17 @@ function drawWave(gapCanvas, sw, redraw){
       const g = ch.ctx.createLinearGradient(0, a.top, 0, a.bottom);
       g.addColorStop(0, `rgba(${GREEN},${.5 * k})`); g.addColorStop(f, `rgba(${GREEN},${.04 * k})`);
       g.addColorStop(f, `rgba(${CORAL},${.04 * k})`); g.addColorStop(1, `rgba(${CORAL},${.55 * k})`); return g; };
+    // the scale hugs the line, like a bank app, so a payday or a big bill shows as a real step even on a large total;
+    // the $0 line only shows when the total comes near it
+    const hi = Math.max(...run), lo = Math.min(...run), span = (hi - lo) || Math.max(100, Math.abs(hi) * .1);
+    let yMax = hi + span * .28, yMin = lo - span * .14;
+    if(lo >= 0 && lo < span * .6) yMin = Math.min(yMin, 0);
+    if(hi <= 0 && -hi < span * .6) yMax = Math.max(yMax, 0);
+    const floor = yMin > 0 ? yMin : yMax < 0 ? yMax : 0;   // where the fill and the echoes rest
     // two faint echoes under the wave give it the layered, ribbon-like depth
-    const datasets = [[.8, .3], [.6, .22]].map(([k, a]) => ({ label:'echo', echo:true, data:run.map(v => v * k), borderWidth:1, borderColor:'rgba(234,242,236,.10)',
-      backgroundColor:signFill(a), fill:'origin', pointRadius:0, pointHoverRadius:0 }));
-    datasets.push({ label:'Left over', data:run, borderColor:signLine, borderWidth:2.5, backgroundColor:signFill(.75), fill:'origin',
+    const datasets = [[.8, .3], [.6, .22]].map(([k, a]) => ({ label:'echo', echo:true, data:run.map(v => floor + (v - floor) * k), borderWidth:1, borderColor:'rgba(234,242,236,.10)',
+      backgroundColor:signFill(a), fill:{ value:floor }, pointRadius:0, pointHoverRadius:0 }));
+    datasets.push({ label:'Running total', data:run, borderColor:signLine, borderWidth:2.5, backgroundColor:signFill(.75), fill:{ value:floor },
       glow: run[ci] >= 0 ? `rgba(${GREEN},.7)` : `rgba(${CORAL},.7)`,
       pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor: c => c.raw >= 0 ? '#8FE39A' : '#F6B0A6', pointHoverBorderColor:'#0F1512', pointHoverBorderWidth:2,
       segment:{ borderDash: s => s.p0DataIndex >= ci ? [5,5] : undefined } });
@@ -110,9 +117,11 @@ function drawWave(gapCanvas, sw, redraw){
         ctx.fillStyle = 'rgba(15,21,18,.38)'; ctx.fillRect(nx, a.top, a.right - nx, a.bottom - a.top);
         // the zero line: above it you kept money, below it more went out than came in
         const zy = chart.scales.y.getPixelForValue(0);
-        ctx.setLineDash([3,4]); ctx.strokeStyle = 'rgba(234,242,236,.4)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(a.left, zy); ctx.lineTo(a.right, zy); ctx.stroke(); ctx.setLineDash([]);
-        ctx.font = '10px ' + mono; ctx.fillStyle = 'rgba(234,242,236,.55)'; ctx.textAlign = 'right'; ctx.fillText('$0', a.right - 4, zy - 5);
+        if(zy >= a.top && zy <= a.bottom){
+          ctx.setLineDash([3,4]); ctx.strokeStyle = 'rgba(234,242,236,.4)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(a.left, zy); ctx.lineTo(a.right, zy); ctx.stroke(); ctx.setLineDash([]);
+          ctx.font = '10px ' + mono; ctx.fillStyle = 'rgba(234,242,236,.55)'; ctx.textAlign = 'right'; ctx.fillText('$0', a.right - 4, zy - 5);
+        }
         // the bright "now" line, with a ringed dot at its top
         ctx.shadowColor = 'rgba(234,242,236,.8)'; ctx.shadowBlur = 8; ctx.strokeStyle = '#EAF2EC'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(nx, a.top + 2); ctx.lineTo(nx, a.bottom); ctx.stroke();
@@ -129,17 +138,17 @@ function drawWave(gapCanvas, sw, redraw){
         plugins:{ legend:{display:false},
           tooltip:{ filter: it => !it.dataset.echo, backgroundColor:'rgba(26,36,31,.92)', borderColor:'rgba(255,255,255,.14)', borderWidth:1, padding:10, cornerRadius:12, titleColor:'#EAF2EC', bodyColor:'#EAF2EC', displayColors:false,
             callbacks:{ title: items => { const i = items[0].dataIndex; return bucketName(B[i]) + (i > ci ? ' (forecast)' : ''); },
-              label: c => { const i = c.dataIndex, k = run[i], when = range === '1y' ? (i === ci ? ' so far' : i > ci ? ', expected' : '') : i > ci ? ' by then, expected' : ' by then';
-                if(range === '1y' && i === ci){ const so = mtd(tIso);
-                  return [`${so >= 0 ? 'Left over' : 'Short'} so far: ${money0(Math.abs(so))}`, `Headed for about ${k < 0 ? '-' : ''}${money0(Math.abs(k))} by month's end`, `${money0(incA[i])} came in, ${money0(outA[i])} went out`]; }
-                const kept = `${k >= 0 ? 'Left over' : 'Short'}${when}: ${money0(Math.abs(k))}`;
+              label: c => { const i = c.dataIndex, k = run[i], money = v => (v < 0 ? '-' : '') + money0(Math.abs(v));
+                if(range === '1y' && i === ci)
+                  return [`Running total now: ${money(now)}`, `Headed for about ${money(k)} by month's end`, `${money0(incA[i])} came in, ${money0(outA[i])} went out this month`];
+                const when = i > ci ? ', expected' : range === '1y' ? ' at month\'s end' : '';
+                const kept = `Running total${when}: ${money(k)}`;
                 if(i > ci) return [kept];
-                const span = range === '1y' ? '' : range === '3m' ? 'This week: ' : 'This day: ';
+                const span = range === '1y' ? 'That month: ' : range === '3m' ? 'That week: ' : 'That day: ';
                 const lines = [kept, `${span}${money0(incA[i])} came in, ${money0(outA[i])} went out`];
                 if(asideA[i] > 0) lines.push(`Set aside ${money0(asideA[i])}`); return lines; } } } },
         scales:{
-                y:{ display:false, ...(() => { const hi = Math.max(0, ...run), lo = Math.min(0, ...run), span = (hi - lo) || 1;
-            return { max: hi + span * .28, min: lo - span * .14 }; })() },
+                y:{ display:false, max:yMax, min:yMin },
           x:{ position:'top', offset:false, border:{display:false},
             grid:{ color: c => c.index === ci ? 'rgba(0,0,0,0)' : named(c.index) ? 'rgba(234,242,236,.08)' : 'rgba(234,242,236,.03)', drawTicks:false },
             ticks:{ padding:10, autoSkip:false, maxRotation:0, font: c => ({ family:mono, size:10, weight: c.index === ci ? '700' : '400' }),
