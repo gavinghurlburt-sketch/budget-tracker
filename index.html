@@ -265,7 +265,10 @@ const Store = {
 const Cloud = {
   client:null, user:null, householdId:null, channel:null,
   enabled(){ return !!(SUPABASE_URL && SUPABASE_KEY && window.supabase); },
-  init(){ if(!this.enabled()) return false; this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); return true; },
+  init(){ if(!this.enabled()) return false; this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // opened from a reset email's link (web only): ask for the new password right away
+    this.client.auth.onAuthStateChange(ev => { if(ev === 'PASSWORD_RECOVERY') setTimeout(() => newPasswordDialog(), 300); });
+    return true; },
   async session(){ const { data } = await this.client.auth.getSession(); this.user = data.session ? data.session.user : null; return this.user; },
   async signIn(email, password){ const { error } = await this.client.auth.signInWithPassword({ email, password }); if(error) throw error; return this.session(); },
   async signUp(email, password){ const { data, error } = await this.client.auth.signUp({ email, password }); if(error) throw error; if(!data.session) return null; return this.session(); },
@@ -867,7 +870,7 @@ function signInDialog(){
   openDialog('Sign in to sync', `
     <p class="muted">You each get your own login and share one budget. If you already have a login for another one of your sites, use that.${local ? ' The data already on this device comes along.' : ''}</p>
     <div class="field"><label>Email</label><input name="email" type="email" autocomplete="username" autocapitalize="none" value="${esc(remembered)}" required></div>
-    <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" minlength="6" required><span class="hint">At least 6 characters. You stay signed in on this device afterward.</span></div>
+    <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" minlength="6" required><span class="hint">At least 6 characters. You stay signed in on this device afterward. <button type="button" class="linkish" data-action="forgot-pass">Forgot password?</button></span></div>
     <div class="dlg-actions">
       <button type="submit" class="btn ghost" name="go" value="local">Skip, use this device only</button>
       <button type="submit" class="btn ghost" name="go" value="signup">Create the login</button>
@@ -885,6 +888,72 @@ function signInDialog(){
         try{ localStorage.removeItem(SKIP_KEY); }catch(e){}
         closeDialog(); return connectHousehold();
       }).catch(e => { btns.forEach(b => b.disabled = false); const m = String(e.message || ''); toast(/invalid login/i.test(m) ? 'Wrong email or password. If this is the first time, use “Create the login”.' : /already registered/i.test(m) ? 'That email already has a login. Try signing in instead.' : (m || 'Sign-in failed.')); });
+      return false;
+    });
+}
+
+/* forgot password: Budgetrr emails a code, you type it here with a new password, and you're signed in.
+   A code works the same in the iPhone app and on the web, so it never depends on where an email link opens.
+   (The Supabase "Reset Password" email template needs {{ .Token }} in it to show the code.) */
+function forgotDialog(email){
+  openDialog('Reset your password', `
+    <p class="muted">We'll email you a code. Type it here with a new password and you're back in.</p>
+    <div class="field"><label>Email</label><input name="email" type="email" autocomplete="username" autocapitalize="none" value="${esc(email || '')}" required></div>
+    <div class="dlg-actions">
+      <button type="button" class="btn ghost" data-action="sign-in">Back</button>
+      <button type="submit" class="btn">Email me a code</button>
+    </div>`, fd => {
+      const em = String(fd.get('email') || '').trim().toLowerCase();
+      if(!em.includes('@')){ toast('Enter your email.'); return false; }
+      const btns = dlgForm.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
+      // on the web a link in the email can also bring you back here; the iPhone app uses the code
+      const opts = /^https?:$/.test(location.protocol) ? { redirectTo: location.origin + location.pathname } : {};
+      Cloud.client.auth.resetPasswordForEmail(em, opts).then(({ error }) => {
+        if(error) throw error;
+        try{ localStorage.setItem(USER_KEY, em); }catch(e){}
+        resetCodeDialog(em);
+      }).catch(e => { btns.forEach(b => b.disabled = false); const m = String(e.message || ''); toast(/rate|seconds/i.test(m) ? 'An email just went out. Wait a minute, then try again.' : (m || 'Couldn’t send the email.')); });
+      return false;
+    });
+}
+function resetCodeDialog(email){
+  openDialog('Check your email', `
+    <p class="muted">We sent a code to <b>${esc(email)}</b>. It can take a minute, and it may land in spam.</p>
+    <div class="field"><label>Code from the email</label><input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required></div>
+    <div class="field"><label>New password</label><input name="password" type="password" autocomplete="new-password" minlength="6" required><span class="hint">At least 6 characters.</span></div>
+    <div class="dlg-actions">
+      <button type="button" class="btn ghost" data-action="forgot-pass" data-email="${esc(email)}">Send a new code</button>
+      <button type="submit" class="btn">Set password and sign in</button>
+    </div>`, fd => {
+      const token = String(fd.get('code') || '').replace(/\D/g, ''), password = String(fd.get('password') || '');
+      if(token.length < 6){ toast('Type the code from the email.'); return false; }
+      if(password.length < 6){ toast('Password needs at least 6 characters.'); return false; }
+      const btns = dlgForm.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
+      Cloud.client.auth.verifyOtp({ email, token, type:'recovery' }).then(({ error }) => {
+        if(error) throw error;
+        return Cloud.client.auth.updateUser({ password });
+      }).then(({ error }) => {
+        if(error) throw error;
+        return Cloud.session();
+      }).then(() => {
+        try{ localStorage.removeItem(SKIP_KEY); }catch(e){}
+        closeDialog(); toast('Password changed. You’re signed in.');
+        return connectHousehold();
+      }).catch(e => { btns.forEach(b => b.disabled = false); const m = String(e.message || ''); toast(/expired|invalid|otp|token/i.test(m) ? 'That code didn’t work or has expired. Send a new one.' : /different from the old/i.test(m) ? 'Pick a password you haven’t used before.' : (m || 'Couldn’t reset the password.')); });
+      return false;
+    });
+}
+function newPasswordDialog(){
+  openDialog('Choose a new password', `
+    <div class="field"><label>New password</label><input name="password" type="password" autocomplete="new-password" minlength="6" required><span class="hint">At least 6 characters.</span></div>
+    <div class="dlg-actions"><button type="submit" class="btn">Save password</button></div>`, fd => {
+      const password = String(fd.get('password') || '');
+      if(password.length < 6){ toast('Password needs at least 6 characters.'); return false; }
+      Cloud.client.auth.updateUser({ password }).then(({ error }) => {
+        if(error) throw error;
+        return Cloud.session();
+      }).then(() => { closeDialog(); toast('Password changed. You’re signed in.'); return connectHousehold(); })
+        .catch(e => toast(e.message || 'Couldn’t save the password.'));
       return false;
     });
 }
@@ -1101,6 +1170,7 @@ const actions = {
   'tx-all': () => { document.querySelectorAll('.tx-check').forEach(c => c.checked = true); txData.forEach((t, i) => txSummary(i)); },
   'tx-none': () => { document.querySelectorAll('.tx-check').forEach(c => c.checked = false); txData.forEach((t, i) => txSummary(i)); },
   'sign-in': () => signInDialog(),
+  'forgot-pass': t => { const f = dlgForm.querySelector('input[name="email"]'); forgotDialog(t.dataset.email || (f ? f.value.trim() : '')); },
   'invite': () => {
     const input = $('#invite-email'), email = String(input && input.value || '').trim().toLowerCase();
     if(!email.includes('@')){ toast('Enter their email.'); return; }
