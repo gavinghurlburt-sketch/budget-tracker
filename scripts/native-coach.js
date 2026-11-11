@@ -70,7 +70,17 @@ async function coachAsk(q){
 actions['coach-open'] = () => {
   if(!(Cloud.user && Cloud.householdId)){ toast('Sign in to your household in Settings to use the coach.'); return; }
   openDialog('Money coach', coachBody(), fd => { coachAsk(fd.get('q')); return false; });
-  dlgForm.classList.add('coach-sheet');
-  dlg.addEventListener('close', () => dlgForm.classList.remove('coach-sheet'), { once:true });
+  dlgForm.classList.add('coach-sheet'); dlg.classList.add('coach-dlg');
+  // keep the sheet exactly the size of what's visible, so the question box sits right on top of the keyboard
+  const vv = window.visualViewport;
+  const fit = () => { if(!vv) return;
+    dlg.style.top = vv.offsetTop + 'px'; dlg.style.height = vv.height + 'px';
+    dlg.classList.toggle('kb', vv.height < window.innerHeight - 120);
+    const chat = $('#coach-chat'); if(chat) chat.scrollTop = chat.scrollHeight; };
+  if(vv){ vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit(); }
+  dlg.addEventListener('close', () => {
+    dlgForm.classList.remove('coach-sheet'); dlg.classList.remove('coach-dlg', 'kb'); dlg.style.top = ''; dlg.style.height = '';
+    if(vv){ vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
+  }, { once:true });
 };
 actions['coach-ask-chip'] = t => coachAsk(t.textContent);

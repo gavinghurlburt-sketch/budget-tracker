@@ -9,7 +9,7 @@ if(typeof Chart !== 'undefined'){
   const rim = rgb => `rgba(${rgb},.95)`;
   // bars: brighter near the top of the chart, fading toward the base, like light through tinted glass
   const barFill = rgb => ctx => { const a = ctx.chart.chartArea; if(!a) return `rgba(${rgb},.4)`;
-    const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+    const g = ctx.chart.options.indexAxis === 'y' ? ctx.chart.ctx.createLinearGradient(a.right, 0, a.left, 0) : ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
     g.addColorStop(0, `rgba(${rgb},.62)`); g.addColorStop(1, `rgba(${rgb},.16)`); return g; };
   // doughnut slices: faint at the hole, richer at the outer edge
   const arcFill = rgb => ctx => { const ch = ctx.chart, a = ch.chartArea; if(!a) return `rgba(${rgb},.4)`;

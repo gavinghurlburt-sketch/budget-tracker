@@ -149,7 +149,7 @@ fs.writeFileSync(p, s);
   // the wave chart and the Home tab go into the main script, just before the app starts
   const startAt = h.indexOf('/* ---------- start ---------- */');
   if(startAt < 0) throw new Error('patch.js: start marker not found');
-  h = h.slice(0, startAt) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-home.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-envelopes.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-glass-charts.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-safe-spend.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-coach.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-story.js', 'utf8') + '\n' + h.slice(startAt);
+  h = h.slice(0, startAt) + fs.readFileSync('scripts/native-wave-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-home.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-envelopes.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-glass-charts.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-sources-chart.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-safe-spend.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-coach.js', 'utf8') + '\n' + fs.readFileSync('scripts/native-story.js', 'utf8') + '\n' + h.slice(startAt);
   const key = /<div class="gap-key">[\s\S]*?<\/div>/;
   if(!key.test(h)) throw new Error('patch.js: gap chart key not found');
   h = h.replace(key, '<div class="gap-key"><span><i class="k-in"></i>Above $0: money left over</span><span><i class="k-out"></i>Below $0: spent more than came in</span><span class="k-note">Each point is what\'s left over so far that month. Past the bright line is the forecast.</span></div>');

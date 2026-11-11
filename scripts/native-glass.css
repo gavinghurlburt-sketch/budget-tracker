@@ -550,3 +550,20 @@ html body .story-block span{font-size:.72rem; font-weight:800; letter-spacing:.0
 html body .story-block p{margin:3px 0 0; line-height:1.4;}
 html body .story-toggle{display:flex; align-items:center; gap:10px; padding:4px 2px; color:var(--ink-soft);}
 html body .story-toggle input{width:22px; height:22px; accent-color:#7FC27A;}
+
+/* coach sheet: fills exactly what's visible; chat scrolls, question box pinned to the bottom (on the keyboard) */
+html body dialog.coach-dlg[open]{inset:0 0 auto 0; overflow:hidden;}
+html body .coach-sheet{display:flex; flex-direction:column; height:100%;}
+html body .coach-sheet .dlg-head{flex:none; position:relative;}
+html body .coach-sheet .dlg-body{flex:1; min-height:0; display:flex; flex-direction:column; gap:10px;
+  padding-bottom:calc(env(safe-area-inset-bottom) + 12px);}
+html body dialog.kb .coach-sheet .dlg-body{padding-bottom:8px;}
+html body .coach-sheet .coach-chat{flex:1; min-height:0; max-height:none; align-content:end;}
+html body .coach-sheet .coach-starters, html body .coach-sheet .coach-ask, html body .coach-sheet .coach-left{flex:none;}
+html body dialog.kb .coach-sheet .coach-left:empty{display:none;}
+
+/* every income source: glass bars by person */
+html body .src-card small{color:var(--ink-soft);}
+html body .src-key{display:flex; gap:16px; margin:10px 0 2px; font-size:.86rem; color:var(--ink-soft);}
+html body .src-key i{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle;}
+html body .src-box{position:relative; margin-top:6px;}
