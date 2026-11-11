@@ -226,7 +226,7 @@ function coinFly(from, to, back){
     { transform:`translate(${dx}px, ${dy}px) scale(1) rotate(0deg)` },
     { transform:`translate(${dx * .72}px, ${dy * .38}px) scale(1.28) rotate(-210deg)`, offset:.55 },
     { transform:'translate(0, 0) scale(1) rotate(-360deg)' }];
-  const a = fly.animate(back ? kf.slice().reverse() : kf, { duration:back ? 460 : 620, easing:'cubic-bezier(.4,.05,.25,1)', fill:'both' });
+  const a = fly.animate(back ? kf.slice().reverse() : kf, { duration:back ? 460 : 520, easing:'cubic-bezier(.4,.05,.25,1)', fill:'both' });
   // a sparkle trail behind it
   let last = 0; const trail = t => {
     if(!fly.isConnected) return;
@@ -245,7 +245,7 @@ function coinBurst(){
     const s = document.createElement('i'), ang = i / 8 * Math.PI * 2 + Math.random() * .4, dist = 38 + Math.random() * 18;
     s.className = 'coin-spark'; s.innerHTML = STAR;
     s.style.setProperty('--x', (Math.cos(ang) * dist).toFixed(1) + 'px'); s.style.setProperty('--y', (Math.sin(ang) * dist).toFixed(1) + 'px');
-    s.style.animationDelay = (Math.random() * 80).toFixed(0) + 'ms';
+    s.style.animationDelay = (Math.random() * 30).toFixed(0) + 'ms';
     m.appendChild(s); setTimeout(() => s.remove(), 900);
   }
 }
@@ -268,7 +268,7 @@ function coachEnter(){
   setTimeout(() => {
     const a = dlgForm.animate([{ clipPath:`circle(0px at ${c.at})` }, { clipPath:`circle(${c.R}px at ${c.at})` }], { duration:560, easing:'cubic-bezier(.25,.8,.25,1)', fill:'forwards' });
     a.finished.catch(() => {}).then(() => { dlgForm.style.clipPath = ''; a.cancel(); });
-  }, 430);
+  }, 470);
 }
 const closeDialogBeforeCoach = closeDialog;
 closeDialog = function(){
