@@ -1,5 +1,5 @@
 /* ---------- Ours or Mine, and a big stat at the top of every page (iPhone build) ----------
-   A glass switch at the top of every page: Ours (everything) or Mine (the signed-in person's own money: what
+   Swipe the big stat on any page (or Home's verdict) sideways to flip between Ours (everything) and Mine (the signed-in person's own money: what
    they earn, spend, pay and put toward goals; things marked Shared count only under Ours). It changes the big
    stat at the top of each page, Home's chart and numbers, and the stats page. The lists further down stay
    whole, so nothing ever looks lost. Ours or Mine is remembered on this phone.
@@ -41,26 +41,47 @@ function inView(fn, keepEnvelopes = true){
   try{ return fn(); } finally{ S = real; }
 }
 
-function whoSwitch(){
+// how the Ours/Mine choice looks: 'tap' (tap the ring), 'avatars' (two little faces), 'swipe' (swipe the big stat), 'pill'
+let whoStyle = 'swipe';
+const FLIP_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>';
+const whoNow = () => viewPid() ? 'mine' : 'ours';
+function whoAvatars(){
+  const me = myPid(), mine = whoNow() === 'mine';
+  const list = mine ? S.people.filter(p => p.id === me) : (me ? [...S.people].sort((a, b) => (a.id === me) - (b.id === me)) : S.people);
+  return `<button type="button" class="who-avs ${mine ? 'one' : 'two'}" data-action="who-flip" aria-label="Showing ${mine ? 'just your money' : 'everyone’s money'}. Tap to switch.">
+    ${list.map(p => `<span class="who-av" style="--c:${personColor(p.id)}">${esc(p.name.trim().charAt(0).toUpperCase())}</span>`).join('')}
+    <em>${mine ? 'Mine' : 'Ours'}</em></button>`;
+}
+const whoDots = () => `<div class="who-dots" role="group" aria-label="Ours or Mine">
+  <button type="button" data-action="who-view" data-who="ours" aria-pressed="${whoNow() === 'ours'}" aria-label="Ours"></button>
+  <button type="button" data-action="who-view" data-who="mine" aria-pressed="${whoNow() === 'mine'}" aria-label="Mine"></button></div>`;
+// the control at the top of a page that has no ring (Home and the stats page); ring pages carry theirs in the ring
+function whoSwitch(ringPage){
   if(solo()) return '';
-  const cur = viewPid() ? 'mine' : 'ours';
-  return `<div class="who-row"><div class="range-switch who-switch" role="group" aria-label="Show everyone's money or just yours" style="--n:2;--i:${cur === 'mine' ? 1 : 0}">
+  const cur = whoNow();
+  if(whoStyle === 'pill') return `<div class="who-row"><div class="range-switch who-switch" role="group" aria-label="Show everyone's money or just yours" style="--n:2;--i:${cur === 'mine' ? 1 : 0}">
     <span class="range-thumb" aria-hidden="true"></span>
     <button type="button" data-action="who-view" data-who="ours" aria-pressed="${cur === 'ours'}">Ours</button>
     <button type="button" data-action="who-view" data-who="mine" aria-pressed="${cur === 'mine'}">Mine</button>
   </div></div>`;
+  if(ringPage) return '';
+  if(whoStyle === 'tap') return `<div class="who-row"><button type="button" class="who-tag" data-action="who-flip">${FLIP_IC}<span>${cur === 'mine' ? 'Mine' : 'Ours'}</span></button></div>`;
+  if(whoStyle === 'avatars') return `<div class="who-row">${whoAvatars()}</div>`;
+  return `<div class="who-row who-row-dots"><span class="who-name">${cur === 'mine' ? 'Mine' : 'Ours'}</span>${whoDots()}</div>`;
 }
+let whoDir = 0;   // which way the big stat slides in after a switch
 function showWho(id){
   whoView = id; try{ localStorage.setItem(WHO_KEY, id); }catch(e){}
-  // slide the thumb first, then redraw the numbers
+  whoDir = id === 'mine' ? 1 : -1;
   document.querySelectorAll('.who-switch').forEach(sw => {
     sw.style.setProperty('--i', id === 'mine' ? 1 : 0);
     sw.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.who === id)));
   });
-  setTimeout(renderAll, 200);
+  document.querySelectorAll('.hero, #panel-home .gap-head').forEach(h => h.classList.add(whoDir > 0 ? 'who-out-l' : 'who-out-r'));
+  setTimeout(() => { renderAll(); setTimeout(() => { whoDir = 0; }, 0); }, 180);
 }
-actions['who-view'] = t => {
-  const id = t.dataset.who; if(id === (viewPid() ? 'mine' : 'ours')) return;
+function whoGo(id){
+  if(id === whoNow()) return;
   if(id === 'mine' && !myPid()){
     openDialog('Which one are you?', `
       <p class="muted" style="margin:0 0 14px">Mine then shows just your own money. You only pick this once${Cloud.user ? ' for this login' : ' on this phone'}.</p>
@@ -68,7 +89,27 @@ actions['who-view'] = t => {
     return;
   }
   showWho(id);
-};
+}
+actions['who-view'] = t => whoGo(t.dataset.who);
+actions['who-flip'] = () => whoGo(whoNow() === 'mine' ? 'ours' : 'mine');
+// swipe the big stat (or Home's verdict) sideways: left for Mine, right for Ours
+let whoTouch = null, whoSwiped = false;
+document.addEventListener('pointerdown', e => {
+  if(whoStyle !== 'swipe' || solo()) return;
+  const h = e.target.closest && e.target.closest('.hero, #panel-home .gap-head'); if(!h) return;
+  whoTouch = { x:e.clientX, y:e.clientY, el:h };
+});
+document.addEventListener('pointermove', e => {
+  if(!whoTouch) return; const dx = e.clientX - whoTouch.x;
+  if(Math.abs(dx) > Math.abs(e.clientY - whoTouch.y)) whoTouch.el.style.transform = `translateX(${dx * .35}px)`;
+});
+document.addEventListener('pointerup', e => {
+  if(!whoTouch) return; const t = whoTouch; whoTouch = null; t.el.style.transform = '';
+  const dx = e.clientX - t.x, dy = e.clientY - t.y;
+  if(Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4){ whoSwiped = true; setTimeout(() => { whoSwiped = false; }, 400); whoGo(dx < 0 ? 'mine' : 'ours'); }
+});
+document.addEventListener('pointercancel', () => { if(whoTouch){ whoTouch.el.style.transform = ''; whoTouch = null; } });
+document.addEventListener('click', e => { if(whoSwiped){ e.stopPropagation(); e.preventDefault(); whoSwiped = false; } }, true);   // a swipe isn't a tap on the chart
 actions['who-me'] = t => { closeDialog(); setMe(t.dataset.pid); showWho('mine'); };
 
 // settings: fix it later if the wrong name was picked
@@ -92,12 +133,16 @@ function heroRing(frac, tone){
   </svg>`;
 }
 function heroHTML(o){
-  return `<section class="hero hero-${o.kind}" aria-label="${esc(o.aria)}">
-    <div class="hero-dial">${heroRing(o.frac, o.tone)}
-      <div class="hero-mid"><b>${o.big}</b>${o.of ? `<small>${o.of}</small>` : ''}</div></div>
+  const two = !solo(), cur = whoNow(), anim = whoDir > 0 ? ' who-in-l' : whoDir < 0 ? ' who-in-r' : '';
+  const tap = two && whoStyle === 'tap';
+  return `<section class="hero hero-${o.kind}${anim}${two && whoStyle === 'swipe' ? ' who-swipe' : ''}" aria-label="${esc(o.aria)}">
+    <div class="hero-dial"${tap ? ` data-action="who-flip" role="button" tabindex="0" aria-label="${cur === 'mine' ? 'Showing just your money' : 'Showing everyone’s money'}. Tap to switch."` : ''}>${heroRing(o.frac, o.tone)}
+      <div class="hero-mid">${tap ? `<span class="who-in-ring">${FLIP_IC}${cur === 'mine' ? 'Mine' : 'Ours'}</span>` : ''}<b>${o.big}</b>${o.of ? `<small>${o.of}</small>` : ''}</div>
+      ${two && whoStyle === 'avatars' ? whoAvatars() : ''}</div>
     <p class="hero-label">${o.label}</p>
     ${o.sub ? `<p class="hero-sub">${o.sub}</p>` : ''}
     ${o.chips && o.chips.length ? `<div class="hero-chips">${o.chips.join('')}</div>` : ''}
+    ${two && whoStyle === 'swipe' ? `<div class="who-swipe-foot"><span class="who-name">${cur === 'mine' ? 'Mine' : 'Ours'}</span>${whoDots()}</div>` : ''}
   </section>`;
 }
 const heroChip = (txt, color) => `<span class="hero-chip"><i style="background:${color}"></i>${txt}</span>`;
@@ -190,12 +235,14 @@ drawCharts = () => inView(drawChartsAll);
 const renderAllBeforeView = renderAll;
 renderAll = function(){
   renderAllBeforeView();
-  const sw = whoSwitch();
+  const sw = whoSwitch(true), swTop = whoSwitch(false);
   const top = (id, html) => { const p = $('#panel-' + id); if(!p) return; const after = p.querySelector(':scope > .month-note, :scope > .stats-top + .month-note') || p.querySelector(':scope > .stats-top');
     if(after) after.insertAdjacentHTML('afterend', html); else p.insertAdjacentHTML('afterbegin', html); };
   top('income', sw + heroIncome());
   top('expenses', sw + heroSpending());
   top('bills', sw + heroBills());
   top('goals', sw + heroSaving());
-  if(sw){ top('home', sw); top('insights', sw); }
+  if(swTop){ top('home', swTop); top('insights', swTop); }
+  // Home's verdict slides in the same way the rings do
+  const gh = $('#panel-home .gap-head'); if(gh && whoDir) gh.classList.add(whoDir > 0 ? 'who-in-l' : 'who-in-r');
 };

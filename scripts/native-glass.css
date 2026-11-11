@@ -814,3 +814,45 @@ html body .hero-chip i{width:8px; height:8px; border-radius:50%;}
 html body .who-switch{min-width:min(220px, 100%);}
 html body .who-pick{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
 html body .who-pick .btn{min-height:52px; font-size:1rem;}
+
+/* Ours/Mine without a pill: tap the ring, two little faces, or swipe the big stat */
+html body .who-tag, html body .who-avs{display:inline-flex; align-items:center; gap:7px; border:0; cursor:pointer; font:inherit; font-weight:800; font-size:.85rem; color:var(--ink);
+  min-height:36px; padding:0 14px; border-radius:999px; -webkit-tap-highlight-color:transparent;
+  background-color:var(--g-fill); -webkit-backdrop-filter:var(--g-blur); backdrop-filter:var(--g-blur);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+html body .who-tag svg, html body .who-in-ring svg{width:15px; height:15px; opacity:.8;}
+html body .hero-dial[data-action]{cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .15s ease;}
+html body .hero-dial[data-action]:active{transform:scale(.96);}
+html body .who-in-ring{display:inline-flex; align-items:center; gap:4px; margin-bottom:4px; padding:3px 9px; border-radius:999px; font-size:.7rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);
+  background-color:var(--g-fill); box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
+/* avatars: overlapped for Ours, one for Mine */
+html body .who-avs{padding:0 12px 0 5px; gap:0;}
+html body .who-avs em{font-style:normal; margin-left:8px;}
+html body .who-av{width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:.8rem; font-weight:800; color:#10180f;
+  background:color-mix(in srgb, var(--c) 85%, white); box-shadow:0 0 0 2px rgba(18,27,22,.9), 0 0 10px color-mix(in srgb, var(--c) 45%, transparent);
+  animation:who-av-in .32s cubic-bezier(.3,1.4,.5,1) both;}
+html body .who-av + .who-av{margin-left:-9px; animation-delay:.05s;}
+@keyframes who-av-in{from{transform:scale(.4); opacity:0;}}
+html body .hero-dial .who-avs{position:absolute; top:4px; right:-52px; min-height:34px; padding:0 4px; background-color:transparent; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none;}
+html body .hero-dial .who-avs em{display:none;}
+html body .hero-dial .who-avs.one{right:-40px;}
+/* swipe: two dots under the stat, like iOS pages */
+html body .who-swipe, html body .gap-head{touch-action:pan-y;}
+html body .who-swipe{transition:transform .2s ease;}
+html body .who-swipe-foot, html body .who-row-dots{display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:12px;}
+html body .who-row-dots{margin-top:0;}
+html body .who-name{font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft);}
+html body .who-dots{display:flex; gap:4px;}
+html body .who-dots button{width:22px; height:22px; border:0; padding:0; background:none; cursor:pointer; display:grid; place-items:center;}
+html body .who-dots button::after{content:""; width:7px; height:7px; border-radius:50%; background:rgba(234,242,236,.3); transition:width .25s, background .25s;}
+html body .who-dots button[aria-pressed="true"]::after{width:18px; border-radius:4px; background:var(--ink);}
+/* the stat slides out and the new one slides in */
+html body .who-out-l{animation:who-out-l .18s ease-in forwards;}
+html body .who-out-r{animation:who-out-r .18s ease-in forwards;}
+html body .who-in-l{animation:who-in-l .3s cubic-bezier(.2,.9,.3,1) both;}
+html body .who-in-r{animation:who-in-r .3s cubic-bezier(.2,.9,.3,1) both;}
+@keyframes who-out-l{to{transform:translateX(-36px); opacity:0;}}
+@keyframes who-out-r{to{transform:translateX(36px); opacity:0;}}
+@keyframes who-in-l{from{transform:translateX(36px); opacity:0;}}
+@keyframes who-in-r{from{transform:translateX(-36px); opacity:0;}}
+@media (prefers-reduced-motion: reduce){ html body .who-out-l, html body .who-out-r, html body .who-in-l, html body .who-in-r, html body .who-av{animation:none;} }
