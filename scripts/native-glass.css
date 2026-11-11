@@ -551,16 +551,38 @@ html body .story-block p{margin:3px 0 0; line-height:1.4;}
 html body .story-toggle{display:flex; align-items:center; gap:10px; padding:4px 2px; color:var(--ink-soft);}
 html body .story-toggle input{width:22px; height:22px; accent-color:#7FC27A;}
 
-/* coach sheet: fills exactly what's visible; chat scrolls, question box pinned to the bottom (on the keyboard) */
-html body dialog.coach-dlg[open]{inset:0 0 auto 0; overflow:hidden;}
-html body .coach-sheet{display:flex; flex-direction:column; height:100%;}
-html body .coach-sheet .dlg-head{flex:none; position:relative;}
-html body .coach-sheet .dlg-body{flex:1; min-height:0; display:flex; flex-direction:column; gap:10px;
-  padding-bottom:calc(env(safe-area-inset-bottom) + 12px);}
-html body dialog.kb .coach-sheet .dlg-body{padding-bottom:8px;}
-html body .coach-sheet .coach-chat{flex:1; min-height:0; max-height:none; align-content:end;}
-html body .coach-sheet .coach-starters, html body .coach-sheet .coach-ask, html body .coach-sheet .coach-left{flex:none;}
-html body dialog.kb .coach-sheet .coach-left:empty{display:none;}
+/* coach pop-up: a floating glass card over a dimmed page. The dialog keeps to what's visible (so the card
+   sits right on the keyboard); the card hugs its content and scrolls the chat once it's tall. */
+html body dialog.coach-dlg[open]{inset:0 0 auto 0; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
+  padding:calc(env(safe-area-inset-top) + 28px) 10px calc(env(safe-area-inset-bottom) + 10px);
+  background-color:rgba(6,10,8,.42); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);}
+html body dialog.coach-dlg.kb[open]{padding-bottom:8px;}
+html body .coach-sheet{display:flex; flex-direction:column; min-height:0; max-height:100%; border-radius:28px; overflow:hidden;
+  background-color:color-mix(in srgb, var(--sheet) 82%, transparent);
+  -webkit-backdrop-filter:blur(30px) saturate(1.6); backdrop-filter:blur(30px) saturate(1.6);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, #C3A6F2 35%, transparent), 0 24px 60px rgba(0,0,0,.5);
+  animation:coach-pop .3s cubic-bezier(.2,.9,.3,1.15);}
+@keyframes coach-pop{from{opacity:0; transform:translateY(28px) scale(.96);} to{opacity:1; transform:none;}}
+html body .coach-sheet .dlg-head{flex:none; position:relative; background:transparent; -webkit-backdrop-filter:none; backdrop-filter:none;
+  padding:14px 12px 4px 20px;}
+html body .coach-sheet .dlg-head h2{font-size:1.2rem;}
+html body .coach-sheet .dlg-body{flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:10px; padding:4px 14px 14px;}
+html body .coach-sheet .coach-chat{flex:1 1 auto; min-height:0; max-height:none; overflow-y:auto;}
+html body .coach-sheet .coach-starters, html body .coach-sheet .coach-ask, html body .coach-sheet .coach-left, html body .coach-sheet .coach-seg{flex:none;}
+html body .coach-seg{display:flex; padding:3px; gap:2px; border-radius:999px; background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px var(--g-ring);}
+html body .coach-seg button{flex:1; min-height:36px; border:0; border-radius:999px; background:transparent; color:var(--ink-soft);
+  font-family:var(--body); font-weight:800; font-size:.9rem; cursor:pointer;}
+html body .coach-seg button[aria-pressed="true"]{color:var(--ink); background-color:color-mix(in srgb, #C3A6F2 22%, transparent);
+  box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, #C3A6F2 50%, transparent);}
+html body .coach-seg em{font-style:normal; font-size:.75rem; padding:1px 7px; margin-left:4px; border-radius:999px; background:color-mix(in srgb, #C3A6F2 30%, transparent);}
+html body .coach-saved{justify-self:start; border:0; background:transparent; padding:0 4px; font-family:var(--body); font-size:.8rem; font-weight:800; color:#C3A6F2; cursor:pointer;}
+html body .coach-saved::before{content:"✓ ";}
+html body .coach-tips{align-content:start; gap:10px;}
+html body .coach-tip{position:relative; padding:12px 40px 10px 14px; border-radius:18px;
+  background-color:color-mix(in srgb, #C3A6F2 10%, transparent); box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px color-mix(in srgb, #C3A6F2 32%, transparent);}
+html body .coach-tip p{margin:0; line-height:1.4; font-weight:700;}
+html body .coach-tip small{display:block; margin-top:4px; color:var(--ink-soft); font-size:.78rem;}
+html body .coach-tip-x{position:absolute; top:8px; right:8px; width:28px; height:28px; border:0; border-radius:50%; background:rgba(255,255,255,.06); color:var(--ink-soft); cursor:pointer;}
 
 /* every income source: one glass split bar per person, a key of its pieces underneath */
 html body .src-card small{color:var(--ink-soft);}

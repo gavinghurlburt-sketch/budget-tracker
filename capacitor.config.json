@@ -3,12 +3,13 @@
   "appName": "Budgetrr",
   "webDir": "www",
   "ios": {
-    "contentInset": "never"
+    "contentInset": "never",
+    "backgroundColor": "#0F1512"
   },
   "plugins": {
     "Keyboard": {
-      "resize": "native",
-      "resizeOnFullScreen": true
+      "resize": "none"
     }
-  }
+  },
+  "backgroundColor": "#0F1512"
 }
