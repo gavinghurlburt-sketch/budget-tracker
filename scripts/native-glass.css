@@ -562,8 +562,21 @@ html body .coach-sheet .coach-chat{flex:1; min-height:0; max-height:none; align-
 html body .coach-sheet .coach-starters, html body .coach-sheet .coach-ask, html body .coach-sheet .coach-left{flex:none;}
 html body dialog.kb .coach-sheet .coach-left:empty{display:none;}
 
-/* every income source: glass bars by person */
+/* every income source: one glass split bar per person, a key of its pieces underneath */
 html body .src-card small{color:var(--ink-soft);}
-html body .src-key{display:flex; gap:16px; margin:10px 0 2px; font-size:.86rem; color:var(--ink-soft);}
-html body .src-key i{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle;}
-html body .src-box{position:relative; margin-top:6px;}
+html body .src-person{margin-top:18px;}
+html body .src-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
+html body .src-head span{font-weight:800; display:inline-flex; align-items:center; gap:8px;}
+html body .src-head i{width:10px; height:10px; border-radius:50%; background:var(--own); box-shadow:0 0 8px color-mix(in srgb, var(--own) 60%, transparent);}
+html body .src-head b{font-size:1.15rem; font-variant-numeric:tabular-nums; color:color-mix(in srgb, var(--own) 70%, white);}
+html body .src-bar{display:flex; gap:2px; height:40px; border-radius:14px; overflow:hidden;
+  box-shadow:0 0 16px color-mix(in srgb, var(--own) 22%, transparent);}
+html body .src-bar span{min-width:6px;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--t) 62%, transparent), color-mix(in srgb, var(--t) 26%, transparent));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px color-mix(in srgb, var(--t) 80%, transparent);}
+html body .src-bar span:first-child{border-radius:14px 0 0 14px;} html body .src-bar span:last-child{border-radius:0 14px 14px 0;}
+html body .src-bar span:only-child{border-radius:14px;}
+html body .src-key{display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; font-size:.86rem; color:var(--ink-soft);}
+html body .src-key span{display:inline-flex; align-items:center; gap:6px;}
+html body .src-key b{color:var(--ink); font-variant-numeric:tabular-nums;}
+html body .src-key i{width:9px; height:9px; border-radius:3px; background:color-mix(in srgb, var(--t) 70%, transparent); box-shadow:inset 0 0 0 1px var(--t);}
