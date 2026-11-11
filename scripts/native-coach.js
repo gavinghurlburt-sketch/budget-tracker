@@ -30,18 +30,15 @@ function coachSummary(){
   };
 }
 
-// a wide glass button under the log buttons on Home
 const coachTips = () => Array.isArray(S.coachTips) ? S.coachTips : [];
 let coachView = 'ask';
-const renderHomeBeforeCoach = renderHome;
-renderHome = function(){
-  renderHomeBeforeCoach();
-  const acts = $('#panel-home .home-actions'); if(!acts) return;
-  const n = coachTips().length;
-  acts.insertAdjacentHTML('afterend', `<button type="button" class="coach-open" data-action="coach-open">
-    <span class="coach-ic">${COACH_IC}</span><span class="coach-txt"><b>Ask the money coach</b><small>${n ? `${n} money tip${n === 1 ? '' : 's'} saved` : '"Can we afford…?" "Why was October tight?"'}</small></span>
-    <svg class="coach-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>`);
-};
+// the coach lives in a floating glass coin at the bottom right of every page; tapping it grows into the chat
+function coachBubble(){
+  if(document.getElementById('coach-bubble')) return;
+  document.body.insertAdjacentHTML('beforeend', `<button type="button" id="coach-bubble" class="coach-bubble" data-action="coach-open" aria-label="Ask the money coach"><span class="cb-rim"></span><span class="cb-face">${COACH_IC}</span><span class="cb-shine"></span></button>`);
+}
+const renderAllBeforeCoach = renderAll;
+renderAll = function(){ renderAllBeforeCoach(); coachBubble(); };
 
 function coachSeg(){
   const n = coachTips().length;
@@ -95,6 +92,7 @@ actions['coach-open'] = () => {
   coachView = 'ask'; coachTyped = '';
   openDialog('Money coach', coachBody(), fd => { coachAsk(fd.get('q')); return false; });
   dlgForm.classList.add('coach-sheet'); dlg.classList.add('coach-dlg');
+  document.body.classList.add('coach-on');
   // a floating card: it keeps to what's visible, so the question box sits right on top of the keyboard
   const vv = window.visualViewport; let base = document.documentElement.clientHeight;
   const fit = () => {
@@ -114,7 +112,7 @@ actions['coach-open'] = () => {
   fit();
   dlg.addEventListener('close', () => {
     dlgForm.classList.remove('coach-sheet'); dlg.classList.remove('coach-dlg', 'kb'); dlg.style.top = ''; dlg.style.height = ''; dlg.style.removeProperty('--kb');
-    coachFit = null;
+    coachFit = null; document.body.classList.remove('coach-on');
     dlg.removeEventListener('click', outside);
     if(vv){ vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
   }, { once:true });
