@@ -113,25 +113,30 @@ function coachMood(m){
   if(m === 'hop'){ c.classList.remove('hop'); void c.offsetWidth; c.classList.add('hop'); }
 }
 
-function coachSeg(){
-  const n = coachTips().length;
-  return `<div class="coach-seg" role="group" aria-label="Coach">
-    <button type="button" data-action="coach-view" data-v="ask" aria-pressed="${coachView === 'ask'}">Ask</button>
-    <button type="button" data-action="coach-view" data-v="tips" aria-pressed="${coachView === 'tips'}">Money tips${n ? ` <em>${n}</em>` : ''}</button></div>`;
+// no switch at the top: the coin itself opens the saved Money tips (its badge shows how many), and tapping it again goes back
+function coachHead(){
+  const about = dlgForm.querySelector('.coach-about'), badge = dlgForm.querySelector('.coach-badge'), coin = dlgForm.querySelector('.coach-mascot');
+  if(!about || !coin) return;
+  const lbl = COACH_PAGES[coachTopic].label, n = coachTips().length;
+  about.textContent = coachView === 'tips' ? 'Money tips' : (lbl ? 'Money coach · ' + lbl : 'Money coach');
+  badge.textContent = n; badge.hidden = !n || coachView === 'tips';
+  coin.setAttribute('aria-label', coachView === 'tips' ? 'Back to the coach' : `Money tips${n ? ', ' + n + ' saved' : ''}`);
+  coin.setAttribute('aria-pressed', String(coachView === 'tips'));
 }
 function coachTipsBody(){
   const tips = coachTips(), fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
-  return `${coachSeg()}<div class="coach-chat coach-tips" id="coach-chat">${tips.length ? tips.map(t => `
+  return `<div class="coach-chat coach-tips" id="coach-chat">${tips.length ? tips.map(t => `
     <div class="coach-tip"><p>${esc(t.tip)}</p><small>${fmt(t.date)} · from "${esc(t.q)}"</small>
       <button type="button" class="coach-tip-x" data-action="coach-tip-del" data-id="${t.id}" aria-label="Remove this tip">✕</button></div>`).join('')
-    : '<p class="coach-hello">When the coach gives you advice worth keeping, it lands here as one short line, so you can come back to it anytime.</p>'}</div>`;
+    : '<p class="coach-hello">When the coach gives you advice worth keeping, it lands here as one short line, so you can come back to it anytime.</p>'}</div>
+    <button type="button" class="coach-back" data-action="coach-view" data-v="ask">Back to the coach</button>`;
 }
 function coachBody(){
   if(coachView === 'tips') return coachTipsBody();
   const esc2 = t => esc(t).replace(/\n/g, '<br>');
   const page = COACH_PAGES[coachTopic];
   const turns = coachChat.map(t => t.weekly ? `<div class="coach-a coach-weekly"><small>This week's tip</small>${esc2(t.a)}</div>` : `<div class="coach-q">${esc(t.q)}</div>${t.a == null ? '<div class="coach-a coach-wait"><span></span><span></span><span></span></div>' : `<div class="coach-a ${t.err ? 'err' : ''}">${esc2(t.a)}</div>${t.tipSaved ? '<button type="button" class="coach-saved" data-action="coach-view" data-v="tips">Saved to Money tips</button>' : ''}`}`).join('');
-  return `${coachSeg()}<div class="coach-chat" id="coach-chat">${turns || `<p class="coach-hello">${page.hello}</p>`}</div>
+  return `<div class="coach-chat" id="coach-chat">${turns || `<p class="coach-hello">${page.hello}</p>`}</div>
     ${coachChat.some(t => !t.weekly) ? '' : `<div class="coach-starters">${page.q.map(q => `<button type="button" class="coach-chip" data-action="coach-ask-chip">${esc(q)}</button>`).join('')}</div>`}
     <div class="coach-ask"><input id="coach-q" name="q" maxlength="500" placeholder="${page.ph}" autocomplete="off" enterkeyhint="send"><button type="submit" class="btn" ${coachBusy ? 'disabled' : ''}>Ask</button></div>
     ${coachLeft == null ? '' : `<small class="coach-left">${coachLeft} question${coachLeft === 1 ? '' : 's'} left this month</small>`}`;
@@ -143,6 +148,7 @@ function coachRefresh(){
   body.innerHTML = coachBody();
   const inp = $('#coach-q'); if(inp && !coachBusy) inp.value = coachTyped;
   const chat = $('#coach-chat'); if(chat) chat.scrollTop = coachView === 'tips' ? 0 : chat.scrollHeight;
+  coachHead();
 }
 async function coachAsk(q){
   q = String(q || '').trim(); if(!q || coachBusy) return;
@@ -168,8 +174,8 @@ actions['coach-open'] = () => {
   const topic = coachPageNow(); if(topic !== coachTopic){ coachTopic = topic; coachChat = coachChat.filter(t => t.weekly); }
   openDialog('Money coach', coachBody(), fd => { coachAsk(fd.get('q')); return false; });
   dlgForm.classList.add('coach-sheet'); dlg.classList.add('coach-dlg');
-  const lbl = COACH_PAGES[coachTopic].label;
-  dlgForm.querySelector('.dlg-head').insertAdjacentHTML('afterbegin', `<div class="coach-mascot${coachBusy ? ' thinking' : ''}" aria-hidden="true"><div class="cb-coin">${COIN}</div></div><span class="coach-about">${lbl ? 'Money coach · ' + lbl : 'Money coach'}</span>`);
+  dlgForm.querySelector('.dlg-head').insertAdjacentHTML('afterbegin', `<button type="button" class="coach-mascot${coachBusy ? ' thinking' : ''}" data-action="coach-coin"><span class="cb-coin">${COIN}</span><em class="coach-badge" hidden></em></button><span class="coach-about"></span>`);
+  coachHead();
   const mascot = dlgForm.querySelector('.coach-mascot'); mascot.addEventListener('animationend', e => { if(e.animationName === 'coin-hop') mascot.classList.remove('hop'); });
   document.body.classList.add('coach-on');
   // a floating card: it keeps to what's visible, so the question box sits right on top of the keyboard
@@ -197,6 +203,7 @@ actions['coach-open'] = () => {
   }, { once:true });
 };
 actions['coach-ask-chip'] = t => coachAsk(t.textContent);
+actions['coach-coin'] = () => { coachView = coachView === 'tips' ? 'ask' : 'tips'; coachRefresh(); if(!coachBusy) coachMood('hop'); };
 actions['coach-view'] = t => { coachView = t.dataset.v === 'tips' ? 'tips' : 'ask'; coachRefresh(); };
 actions['coach-tip-del'] = t => { S.coachTips = coachTips().filter(x => x.id !== t.dataset.id); commit('Tip removed'); coachRefresh(); };
 
