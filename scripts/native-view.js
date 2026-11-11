@@ -1,11 +1,33 @@
-/* ---------- Ours or one person, and a big stat at the top of every page (iPhone build) ----------
-   A glass switch at the top of every page: Ours (everything) or one person's own money (what they earn,
-   spend, pay and put toward goals; things marked Shared count only under Ours). It changes the big stat at
-   the top of each page, Home's chart and numbers, and the stats page. The lists further down stay whole,
-   so nothing ever looks lost. The pick is remembered on this phone. Nothing here saves budget data. */
-const WHO_KEY = 'budgetrr-who';
-let whoView = 'ours'; try{ const v = localStorage.getItem(WHO_KEY); if(v) whoView = v; }catch(e){}
-const viewPid = () => (!solo() && S.people.some(p => p.id === whoView)) ? whoView : null;
+/* ---------- Ours or Mine, and a big stat at the top of every page (iPhone build) ----------
+   A glass switch at the top of every page: Ours (everything) or Mine (the signed-in person's own money: what
+   they earn, spend, pay and put toward goals; things marked Shared count only under Ours). It changes the big
+   stat at the top of each page, Home's chart and numbers, and the stats page. The lists further down stay
+   whole, so nothing ever looks lost. Ours or Mine is remembered on this phone.
+   Which person "Mine" is gets asked once per login and saved with the budget (S.logins), so it follows that
+   login to any phone. Once one login is linked, the other login is the other person without asking.
+   Not signed in: it's asked once and kept on this phone. */
+const WHO_KEY = 'budgetrr-who', ME_KEY = 'budgetrr-me';
+let whoView = 'ours'; try{ const v = localStorage.getItem(WHO_KEY); if(v === 'mine') whoView = 'mine'; }catch(e){}
+const isPerson = id => S.people.some(p => p.id === id);
+function myPid(){
+  if(solo()) return null;
+  const uid = Cloud.user && Cloud.user.id;
+  if(uid){
+    const links = S.logins || {};
+    if(isPerson(links[uid])) return links[uid];
+    const taken = Object.entries(links).filter(([u, p]) => u !== uid && isPerson(p)).map(([, p]) => p);
+    const left = S.people.filter(p => !taken.includes(p.id));
+    return taken.length && left.length === 1 ? left[0].id : null;   // the other login is the other person
+  }
+  try{ const me = localStorage.getItem(ME_KEY); if(isPerson(me)) return me; }catch(e){}
+  return null;
+}
+function setMe(pid){
+  const uid = Cloud.user && Cloud.user.id;
+  if(uid){ S.logins = { ...(S.logins || {}), [uid]: pid }; commit(); }
+  else { try{ localStorage.setItem(ME_KEY, pid); }catch(e){} }
+}
+const viewPid = () => whoView === 'mine' ? myPid() : null;
 function onlyPerson(pid, keepEnvelopes){
   const src = S.sources.filter(s => s.personId === pid), ids = new Set(src.map(s => s.id));
   return { ...S, sources:src, income:S.income.filter(e => ids.has(e.sourceId)), expenses:S.expenses.filter(e => e.personId === pid),
@@ -21,23 +43,44 @@ function inView(fn, keepEnvelopes = true){
 
 function whoSwitch(){
   if(solo()) return '';
-  const opts = [['ours', 'Ours'], ...S.people.map(p => [p.id, p.name])];
-  const cur = viewPid() || 'ours', i = opts.findIndex(o => o[0] === cur);
-  return `<div class="who-row"><div class="range-switch who-switch" role="group" aria-label="Whose money to show" style="--n:${opts.length};--i:${i}">
+  const cur = viewPid() ? 'mine' : 'ours';
+  return `<div class="who-row"><div class="range-switch who-switch" role="group" aria-label="Show everyone's money or just yours" style="--n:2;--i:${cur === 'mine' ? 1 : 0}">
     <span class="range-thumb" aria-hidden="true"></span>
-    ${opts.map(([id, n]) => `<button type="button" data-action="who-view" data-who="${id}" aria-pressed="${id === cur}">${esc(n)}</button>`).join('')}
+    <button type="button" data-action="who-view" data-who="ours" aria-pressed="${cur === 'ours'}">Ours</button>
+    <button type="button" data-action="who-view" data-who="mine" aria-pressed="${cur === 'mine'}">Mine</button>
   </div></div>`;
 }
-actions['who-view'] = t => {
-  const id = t.dataset.who; if(id === (viewPid() || 'ours')) return;
+function showWho(id){
   whoView = id; try{ localStorage.setItem(WHO_KEY, id); }catch(e){}
   // slide the thumb first, then redraw the numbers
   document.querySelectorAll('.who-switch').forEach(sw => {
-    const btns = [...sw.querySelectorAll('button')];
-    sw.style.setProperty('--i', btns.findIndex(b => b.dataset.who === id));
-    btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.who === id)));
+    sw.style.setProperty('--i', id === 'mine' ? 1 : 0);
+    sw.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.who === id)));
   });
   setTimeout(renderAll, 200);
+}
+actions['who-view'] = t => {
+  const id = t.dataset.who; if(id === (viewPid() ? 'mine' : 'ours')) return;
+  if(id === 'mine' && !myPid()){
+    openDialog('Which one are you?', `
+      <p class="muted" style="margin:0 0 14px">Mine then shows just your own money. You only pick this once${Cloud.user ? ' for this login' : ' on this phone'}.</p>
+      <div class="who-pick">${S.people.map(p => `<button type="button" class="btn ghost" data-action="who-me" data-pid="${p.id}">${esc(p.name)}</button>`).join('')}</div>`);
+    return;
+  }
+  showWho(id);
+};
+actions['who-me'] = t => { closeDialog(); setMe(t.dataset.pid); showWho('mine'); };
+
+// settings: fix it later if the wrong name was picked
+const settingsDialogBeforeMe = settingsDialog;
+settingsDialog = function(firstRun){
+  settingsDialogBeforeMe(firstRun);
+  if(firstRun || solo()) return;
+  const hr = dlgForm.querySelector('hr.divider'); if(!hr) return;
+  const me = myPid();
+  hr.insertAdjacentHTML('beforebegin', `<div class="field" style="margin-top:14px"><label for="who-me-sel">“Mine” ${Cloud.user ? 'for this login' : 'on this phone'} is</label>
+    <select id="who-me-sel">${me ? '' : '<option value="">Not picked yet</option>'}${S.people.map(p => `<option value="${p.id}" ${p.id === me ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></div>`);
+  $('#who-me-sel').addEventListener('change', e => { if(e.target.value){ setMe(e.target.value); renderAll(); toast('Got it'); } });
 };
 
 /* ---------- the big stat: a glowing ring with the number in the middle ---------- */

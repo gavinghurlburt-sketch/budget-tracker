@@ -811,3 +811,6 @@ html body .hero-chip{display:inline-flex; align-items:center; gap:7px; padding:6
   box-shadow:inset 0 1px 0 var(--g-edge), inset 0 0 0 1px var(--g-ring);}
 html body .hero-chip i{width:8px; height:8px; border-radius:50%;}
 @media (prefers-reduced-motion: reduce){ html body .hero-ring .hr-arc{transition:none;} }
+html body .who-switch{min-width:min(220px, 100%);}
+html body .who-pick{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+html body .who-pick .btn{min-height:52px; font-size:1rem;}
