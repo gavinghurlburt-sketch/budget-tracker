@@ -656,3 +656,8 @@ html body .month-note button{font:inherit; font-weight:800; font-size:.85rem; co
 /* keyboard up: the question box sits right on the keys; the "questions left" line waits until it closes */
 html body dialog.coach-dlg.kb .coach-left{display:none;}
 html body dialog.coach-dlg.kb .coach-sheet .dlg-body{padding-bottom:10px;}
+
+/* bank screenshot review: remembered skips */
+html body .tx.skipped .tx-what{opacity:.6;}
+html body .tx-skip{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:.88rem; color:var(--ink-soft);}
+html body .tx-skip .linkish{font-weight:800;}
